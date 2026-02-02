@@ -5,8 +5,10 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.lwd.jobportal.authdto.RegisterRequest;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.repository.UserRepository;
 import com.lwd.jobportal.security.JwtUtil;
 
@@ -30,23 +32,41 @@ public class AuthService {
         this.jwtUtil = jwtUtil;
     }
 
-    // ✅ REGISTER USER
-    public User register(String name, String email, String password, Role role) {
+    // ✅ REGISTER USER FROM DTO
+    public User registerUser(RegisterRequest request) {
 
-        if (userRepository.existsByEmail(email)) {
+        if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already registered");
         }
 
+        Role role = Role.valueOf(request.getRole().toUpperCase());
+
+        UserStatus status;
+        switch (role) {
+            case RECRUITER:
+                status = UserStatus.PENDING; // Needs approval by RECRUITER_ADMIN
+                break;
+            case JOB_SEEKER:
+            case RECRUITER_ADMIN:
+            case ADMIN:
+                status = UserStatus.ACTIVE;  // Active immediately
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid role: " + request.getRole());
+        }
+
         User user = User.builder()
-                .name(name)
-                .email(email)
-                .password(passwordEncoder.encode(password))
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
                 .role(role)
+                .status(status)
                 .isActive(true)
                 .build();
 
         return userRepository.save(user);
     }
+
 
     // ✅ LOGIN USER
     public String login(String email, String password) {

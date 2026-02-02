@@ -116,24 +116,38 @@ public class JobApplicationService {
         return buildPagedResponse(applications);
     }
 
-    // ================= ADMIN: APPLICATIONS BY STATUS =================
-    @PreAuthorize("hasRole('ADMIN')")
-    @Transactional(readOnly = true)
-    public PagedApplicationsResponse getApplicationsByStatus(String status, int page, int size) {
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    @Transactional
+    public void changeApplicationStatus(
+            Long applicationId,
+            ApplicationStatus newStatus,
+            Long userId,
+            Role role
+    ) {
 
-        ApplicationStatus applicationStatus;
-        try {
-            applicationStatus = ApplicationStatus.valueOf(status.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            throw new BadRequestException("Invalid application status: " + status);
+        JobApplication application = jobApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+
+        // ADMIN → allow directly
+        if (role == Role.ADMIN) {
+            application.setStatus(newStatus);
+            application.setUpdatedBy(userId); 
+            jobApplicationRepository.save(application);
+            return;
         }
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
-        Page<JobApplication> applications =
-                jobApplicationRepository.findByStatus(applicationStatus, pageable);
+        Company company = companyRepository.findByCreatedById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
 
-        return buildPagedResponse(applications);
+        if (!company.getId().equals(application.getJob().getCompany().getId())) {
+            throw new AccessDeniedException("You are not allowed to update this application");
+        }
+
+        application.setStatus(newStatus);
+        application.setUpdatedBy(userId); // 🔹 who updated
+        jobApplicationRepository.save(application);
     }
+
 
 
     // ================= COMPANY ADMIN / RECRUITER: ALL COMPANY APPLICATIONS =================
@@ -153,37 +167,7 @@ public class JobApplicationService {
         return buildPagedResponse(applications);
     }
     
-    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
-    @Transactional
-    public void changeApplicationStatus(
-            Long applicationId,
-            ApplicationStatus newStatus,
-            Long userId
-    ) {
-
-        JobApplication application = jobApplicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        
-        if (user.getRole() == Role.ADMIN) {
-            application.setStatus(newStatus);
-            jobApplicationRepository.save(application);
-            return;
-        }
-
-        Company company = companyRepository.findByCreatedById(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
-
-        if (!company.getId().equals(application.getJob().getCompany().getId())) {
-            throw new AccessDeniedException("You are not allowed to update this application");
-        }
-
-        application.setStatus(newStatus);
-        jobApplicationRepository.save(application);
-    }
-
+    
 
     // ================= HELPER: BUILD PAGED RESPONSE =================
     private PagedApplicationsResponse buildPagedResponse(Page<JobApplication> page) {

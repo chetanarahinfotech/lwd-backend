@@ -9,7 +9,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.lwd.jobportal.enums.ApplicationStatus;
+import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.jobapplicationdto.*;
+import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.JobApplicationService;
 
 import lombok.RequiredArgsConstructor;
@@ -47,17 +49,21 @@ public class JobApplicationController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping("/status/{status}")
-    public ResponseEntity<PagedApplicationsResponse> getApplicationsByStatus(
-            @PathVariable String status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    @PutMapping("/{id}/status")
+    public ResponseEntity<Void> changeApplicationStatus(
+            @PathVariable Long id,
+            @RequestParam ApplicationStatus status
     ) {
-        PagedApplicationsResponse response =
-                jobApplicationService.getApplicationsByStatus(status, page, size);
-        return ResponseEntity.ok(response);
+
+        Long userId = SecurityUtils.getUserId();
+        Role role = SecurityUtils.getRole();
+
+        jobApplicationService.changeApplicationStatus(id, status, userId, role);
+
+        return ResponseEntity.ok().build();
     }
+
 
     // ================= COMPANY ADMIN / RECRUITER ENDPOINTS =================
     @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
@@ -90,19 +96,6 @@ public class JobApplicationController {
         return ResponseEntity.ok(response);
     }
     
-    @PutMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
-    public ResponseEntity<?> changeApplicationStatus(
-            @PathVariable Long id,
-            @RequestParam ApplicationStatus status,
-            Authentication authentication
-    ) {
-        Long userId = (Long) authentication.getPrincipal(); // ✅ controller level
-
-        jobApplicationService.changeApplicationStatus(id, status, userId);
-
-        return ResponseEntity.ok("Application status updated successfully");
-    }
 
 
     // ================= JOB SEEKER ENDPOINTS =================

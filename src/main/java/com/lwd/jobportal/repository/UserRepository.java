@@ -6,8 +6,10 @@ import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.enums.UserStatus;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
@@ -23,4 +25,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Find active users
     List<User> findByIsActiveTrue();
+
+	List<User> findByRoleAndCompany(Role role, Company company);
+	
+	List<User> findByRoleAndCompanyIdAndStatus(
+	        Role role,
+	        Long companyId,
+	        UserStatus status
+	);
+
 }

@@ -9,7 +9,6 @@ import com.lwd.jobportal.authdto.RegisterRequest;
 import com.lwd.jobportal.authdto.RegisterResponse;
 import com.lwd.jobportal.authservice.AuthService;
 import com.lwd.jobportal.entity.User;
-import com.lwd.jobportal.enums.Role;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -25,18 +24,15 @@ public class AuthController {
     public ResponseEntity<RegisterResponse> register(
             @RequestBody RegisterRequest request) {
 
-        User user = authService.register(
-                request.getName(),
-                request.getEmail(),
-                request.getPassword(),
-                Role.valueOf(request.getRole())
-        );
+        User user = authService.registerUser(request);
 
+        // Build response DTO
         RegisterResponse response = new RegisterResponse(
                 user.getId(),
                 user.getName(),
                 user.getEmail(),
                 user.getRole(),
+                user.getStatus(),  
                 user.getIsActive(),
                 user.getCreatedAt()
         );
