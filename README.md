@@ -114,7 +114,7 @@ Steps
 
 Clone the repository
 
-git clone https://github.com/your-username/lwd-job-portal.git
+https://github.com/chetanarahinfotech/lwd-job-portal
 
 
 Configure MySQL database in application.properties
