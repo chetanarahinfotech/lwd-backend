@@ -22,4 +22,14 @@ public class SecurityUtils {
                 .getAuthorities()
                 .contains(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
+    
+    public static Role getRole() {
+        return SecurityContextHolder.getContext().getAuthentication()
+                .getAuthorities()
+                .stream()
+                .map(a -> a.getAuthority().replace("ROLE_", ""))
+                .map(Role::valueOf)
+                .findFirst()
+                .orElseThrow(() -> new IllegalStateException("Role not found"));
+    }
 }

@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class UserServiceImpl {
+public class UserService {
 
     private final UserRepository userRepository;
 

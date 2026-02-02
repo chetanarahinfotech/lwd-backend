@@ -1,22 +1,22 @@
 package com.lwd.jobportal.authdto;
 
+import java.time.LocalDateTime;
+
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 
-import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
-
-import java.time.LocalDateTime;
+import lombok.Setter;
 
 @Getter
-@AllArgsConstructor
-public class RegisterResponse {
-
+@Setter
+@Builder
+public class RecruiterResponse {
     private Long id;
     private String name;
     private String email;
     private Role role;
     private UserStatus status;
-    private Boolean isActive;
     private LocalDateTime createdAt;
 }

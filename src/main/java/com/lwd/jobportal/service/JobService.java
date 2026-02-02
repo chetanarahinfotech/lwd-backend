@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.*;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,9 +14,11 @@ import com.lwd.jobportal.entity.*;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
 import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.jobdto.*;
 import com.lwd.jobportal.repository.*;
+import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.specification.JobSpecification;
 
 import lombok.RequiredArgsConstructor;
@@ -44,17 +47,45 @@ public class JobService {
     }
     
     
-    // ==================================================
-    // RECRUITER CREATE JOB
-    // ==================================================
-    @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
-    public JobResponse createJobAsRecruiter(CreateJobRequest request, Long userId) {
-        User recruiter = getUserById(userId);
+    @Transactional
+    public JobResponse createJobAsRecruiter(CreateJobRequest request) {
 
-        Company company = companyRepository.findByCreatedById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("You must create a company before posting jobs"));
+        Long userId = SecurityUtils.getUserId();
+        Role role = SecurityUtils.getRole();
 
-        Job job = buildJob(request, recruiter, company);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        // 🔒 Only ACTIVE users
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new AccessDeniedException("User is not approved");
+        }
+
+        Company company;
+
+        // ================= RECRUITER_ADMIN =================
+        if (role == Role.RECRUITER_ADMIN) {
+
+            company = companyRepository.findByCreatedById(userId)
+                    .orElseThrow(() ->
+                            new IllegalStateException("Recruiter Admin does not own any company"));
+
+        }
+        // ================= RECRUITER =================
+        else if (role == Role.RECRUITER) {
+
+            if (user.getCompany() == null) {
+                throw new AccessDeniedException("Recruiter is not assigned to any company");
+            }
+
+            company = user.getCompany();
+        }
+        // ================= INVALID =================
+        else {
+            throw new AccessDeniedException("Invalid role for job creation");
+        }
+
+        Job job = buildJob(request, user, company);
         job.setStatus(JobStatus.OPEN);
 
         return mapToResponse(jobRepository.save(job));

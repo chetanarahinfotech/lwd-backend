@@ -19,6 +19,7 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 	
 	@EntityGraph(attributePaths = {"company"})
 	Page<Job> findByCompanyId(Long companyId, Pageable pageable);
+	
     List<Job> findByCreatedById(Long userId);
     
     List<Job> findByStatusAndCreatedAtLessThanOrderByCreatedAtDesc(

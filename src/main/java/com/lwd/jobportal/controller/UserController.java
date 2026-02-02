@@ -5,7 +5,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.lwd.jobportal.security.SecurityUtils;
-import com.lwd.jobportal.service.UserServiceImpl;
+import com.lwd.jobportal.service.UserService;
 import com.lwd.jobportal.userdto.UpdateUserRequest;
 import com.lwd.jobportal.userdto.UserResponse;
 
@@ -16,16 +16,14 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserServiceImpl userService;
+    private final UserService userService;
 
   
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getMyProfile(Authentication authentication) {
 
-    	Long userId = (Long) authentication.getPrincipal();
-    	Long id = SecurityUtils.getUserId();
+    	Long userId = SecurityUtils.getUserId();
 
-    	System.out.println(" Current user Id " + id);
         return ResponseEntity.ok(
                 userService.getUserById(userId)
         );
@@ -37,7 +35,7 @@ public class UserController {
             @RequestBody UpdateUserRequest request,
             Authentication authentication) {
 
-        Long userId = (Long) authentication.getPrincipal(); // from JWT
+        Long userId = SecurityUtils.getUserId();
 
         return ResponseEntity.ok(
                 userService.updateUser(userId, request)
