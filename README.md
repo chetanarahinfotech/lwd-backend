@@ -1,9 +1,9 @@
-﻿#🧑‍💼 LWD Job Seeker Portal
+﻿# 🧑‍💼 LWD Job Seeker Portal
 
 A full-stack Job Portal application that connects Job Seekers, Companies, and Admins on a single secure platform.
 Built using Spring Boot, JWT Security, and a scalable layered architecture.
 
-##✨ Key Highlights
+## ✨ Key Highlights
 
 JWT-based secure authentication
 
@@ -15,8 +15,8 @@ Soft delete and audit support across all entities
 
 Scalable, frontend-ready backend design
 
-##🚀 Features
-###👤 Job Seeker (User)
+## 🚀 Features
+### 👤 Job Seeker (User)
 
 User registration & login (JWT authentication)
 
@@ -28,7 +28,7 @@ Track application status
 
 Manage user profile
 
-###🏢 Company
+### 🏢 Company
 
 Company registration & authentication
 
@@ -40,7 +40,7 @@ View applicants for posted jobs
 
 Soft delete and active/inactive company support
 
-###🛠️ Admin
+### 🛠️ Admin
 
 Manage users, companies, and job listings
 
@@ -48,7 +48,7 @@ Monitor overall platform activity
 
 Full role-based access control
 
-###🔐 Security
+### 🔐 Security
 
 JWT Authentication
 
@@ -59,7 +59,7 @@ ADMIN | COMPANY | USER
 
 Secure RESTful APIs
 
-##🧱 Core Entities
+## 🧱 Core Entities
 
 User
 
@@ -69,7 +69,7 @@ Job
 
 JobApplication
 
-##📌 Common Audit Fields
+## 📌 Common Audit Fields
 
 createdAt
 
@@ -79,8 +79,8 @@ createdBy
 
 isActive (Soft delete support)
 
-##🛠️ Tech Stack
-###🔙 Backend
+## 🛠️ Tech Stack
+### 🔙 Backend
 
 Java 17
 
@@ -90,11 +90,11 @@ Spring Security
 
 Spring Data JPA (Hibernate)
 
-###🗄️ Database
+### 🗄️ Database
 
 MySQL
 
-###🧰 Tools
+### 🧰 Tools
 
 Maven
 
@@ -102,7 +102,7 @@ Postman
 
 Git & GitHub
 
-##📂 Backend Project Structure
+## 📂 Backend Project Structure
 com.lwd.jobportal
 │
 ├── controller
@@ -115,9 +115,8 @@ com.lwd.jobportal
 ├── config
 └── enums
 
-
-##⚙️ Setup & Installation
-###✅ Prerequisites
+## ⚙️ Setup & Installation
+### ✅ Prerequisites
 
 Java 17+
 
@@ -127,26 +126,23 @@ Maven
 
 IDE (IntelliJ IDEA / Eclipse)
 
-##🧩 Steps to Run
-
-###1️⃣ Clone the repository
-
+## 🧩 Steps to Run
+### 1️⃣ Clone the repository
 git clone https://github.com/chetanarahinfotech/lwd-job-portal
 
+### 2️⃣ Configure MySQL
 
-###2️⃣ Configure MySQL
 Update database credentials in application.properties
 
-###3️⃣ Build & Run
-
+### 3️⃣ Build & Run
 mvn clean install
 mvn spring-boot:run
 
+### 4️⃣ Test APIs
 
-###4️⃣ Test APIs
 Use Postman to test secured REST APIs
 
-##📌 Future Enhancements
+## 📌 Future Enhancements
 
 Advanced job filtering & search
 
@@ -158,11 +154,11 @@ Frontend integration (React)
 
 Migration to microservices architecture
 
-##👨‍💻 Author
+## 👨‍💻 Author
+Chetan Purkar
 
-###Chetan Purkar
-###🎓 MSc Computer Science
-###💻 Full Stack Developer
+### 🎓 MSc Computer Science
+### 💻 Full Stack Developer
 
 Skills:
 Java • Spring Boot • React • MySQL
