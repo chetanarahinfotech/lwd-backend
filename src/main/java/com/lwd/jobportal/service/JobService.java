@@ -142,6 +142,7 @@ public class JobService {
         job.setStatus(status);
         return mapToResponse(jobRepository.save(job));
     }
+    
 
     // ==================================================
     // READ APIs
@@ -150,6 +151,7 @@ public class JobService {
         return mapToResponse(getJobByIdInternal(jobId));
     }
 
+    
     public PagedJobResponse getJobsByCompany(Long companyId, int page) {
 
         Pageable pageable = PageRequest.of(
@@ -276,6 +278,102 @@ public class JobService {
 
         return toPagedResponse(responsePage);
     }
+    
+    public PagedJobResponse quickSearch(String keyword, int page, int size) {
+
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<Job> jobPage = jobRepository.quickSearch(
+                keyword.toLowerCase(),
+                pageable
+        );
+
+        return toPagedResponse(jobPage.map(this::mapToResponse));
+    }
+    
+    public PagedJobResponse filterJobs(
+            String location,
+            JobType jobType,
+            Integer minExp,
+            Integer maxExp,
+            JobStatus status,
+            int page,
+            int size
+    ) {
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Job> jobPage = jobRepository.findAll(
+                JobSpecification.filterJobs(
+                        location,
+                        jobType,
+                        minExp,
+                        maxExp,
+                        status
+                ),
+                pageable
+        );
+
+        return toPagedResponse(jobPage.map(this::mapToResponse));
+    }
+    
+    public List<JobResponse> getSuggestedJobs(Long userId) {
+
+        // Fetch last applied job
+        Job lastAppliedJob = jobRepository.findLastAppliedJob(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("No job history found"));
+
+        return jobRepository.findSuggestedJobs(
+                        lastAppliedJob.getLocation(),
+                        lastAppliedJob.getIndustry()
+                )
+                .stream()
+                .limit(10)
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    
+    public List<JobResponse> getSimilarJobs(Long jobId) {
+
+        Job job = getJobByIdInternal(jobId);
+
+        return jobRepository.findSimilarJobs(
+                        job.getIndustry(),
+                        job.getJobType(),
+                        job.getId()
+                )
+                .stream()
+                .limit(6)
+                .map(this::mapToResponse)
+                .toList();
+    }
+    
+    public List<String> getSearchSuggestions(String keyword) {
+
+        return jobRepository.findTitleSuggestions(keyword.toLowerCase());
+    }
+
+    
+    public List<JobResponse> getTrendingJobs() {
+
+        Pageable pageable = PageRequest.of(0, 10);
+
+        return jobRepository.findTrendingJobs(pageable)
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+    
+
+
+
+
+
 
     // ==================================================
     // PRIVATE HELPERS

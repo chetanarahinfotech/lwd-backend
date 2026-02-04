@@ -1,6 +1,7 @@
 package com.lwd.jobportal.specification;
 
 import com.lwd.jobportal.entity.Job;
+import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
 
 import org.springframework.data.jpa.domain.Specification;
@@ -52,4 +53,35 @@ public class JobSpecification {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+    
+    
+    public static Specification<Job> filterJobs(
+            String location,
+            JobType jobType,
+            Integer minExp,
+            Integer maxExp,
+            JobStatus status
+    ) {
+        return (root, query, cb) -> {
+            Predicate p = cb.conjunction();
+
+            if (location != null)
+                p = cb.and(p, cb.equal(root.get("location"), location));
+
+            if (jobType != null)
+                p = cb.and(p, cb.equal(root.get("jobType"), jobType));
+
+            if (minExp != null)
+                p = cb.and(p, cb.greaterThanOrEqualTo(root.get("minExperience"), minExp));
+
+            if (maxExp != null)
+                p = cb.and(p, cb.lessThanOrEqualTo(root.get("maxExperience"), maxExp));
+
+            if (status != null)
+                p = cb.and(p, cb.equal(root.get("status"), status));
+
+            return p;
+        };
+    }
+
 }

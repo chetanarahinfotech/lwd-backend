@@ -75,6 +75,10 @@ public class Job {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;
+    
+    @Column(nullable = false)
+    private Long viewCount = 0L;
+
 
     // ================= AUDIT =================
     @Column(nullable = false, updatable = false)
@@ -91,7 +95,14 @@ public class Job {
 
         if (status == null) status = JobStatus.OPEN;
         if (minExperience == null) minExperience = 0;
+        
+        if (viewCount == null) {
+            viewCount = 0L;
+        }
     }
+    
+   
+
 
     @PreUpdate
     protected void onUpdate() {

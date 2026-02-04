@@ -1,7 +1,7 @@
 package com.lwd.jobportal.enums;
 
 public enum UserStatus {
-    PENDING,
     ACTIVE,
+    PENDING,
     BLOCKED
 }

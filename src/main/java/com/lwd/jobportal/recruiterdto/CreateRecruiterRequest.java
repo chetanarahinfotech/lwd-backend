@@ -1,4 +1,4 @@
-package com.lwd.jobportal.recriuterdto;
+package com.lwd.jobportal.recruiterdto;
 
 import lombok.Data;
 
