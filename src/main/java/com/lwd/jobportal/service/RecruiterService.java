@@ -1,7 +1,6 @@
 package com.lwd.jobportal.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.*;
 import org.springframework.security.access.AccessDeniedException;

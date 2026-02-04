@@ -1,4 +1,4 @@
-package com.lwd.jobportal.authdto;
+package com.lwd.jobportal.recruiteradmindto;
 
 import java.time.LocalDateTime;
 

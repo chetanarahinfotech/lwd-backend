@@ -68,22 +68,25 @@ public class AuthService {
     }
 
 
-    // ✅ LOGIN USER
     public String login(String email, String password) {
-
-        // Authenticate email + password
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
-        );
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
-        // Generate JWT
+        // 🚫 CHECK STATUS BEFORE AUTH
+        if (user.getStatus() == UserStatus.BLOCKED) {
+            throw new RuntimeException("User is blocked");
+        }
+
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(email, password)
+        );
+
         return jwtUtil.generateToken(
                 user.getId(),
                 user.getEmail(),
                 user.getRole().name()
         );
     }
+
 }

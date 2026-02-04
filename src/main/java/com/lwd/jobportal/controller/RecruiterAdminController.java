@@ -6,7 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.lwd.jobportal.authdto.RecruiterResponse;
+import com.lwd.jobportal.jobdto.JobResponse;
+import com.lwd.jobportal.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.RecruiterAdminService;
 
@@ -19,7 +20,7 @@ public class RecruiterAdminController {
 
     private final RecruiterAdminService recruiterAdminService;
 
- // ================= LIST ALL RECRUITERS =================
+    // ================= LIST ALL RECRUITERS =================
     @PreAuthorize("hasRole('RECRUITER_ADMIN')")
     @GetMapping("/recruiters")
     public ResponseEntity<List<RecruiterResponse>> getRecruiters(){
@@ -30,6 +31,7 @@ public class RecruiterAdminController {
         
         return ResponseEntity.ok(recruiters);
     }
+    
     
     @PreAuthorize("hasRole('RECRUITER_ADMIN')")
     @GetMapping("/recruiters/pending")
@@ -68,5 +70,17 @@ public class RecruiterAdminController {
 
         RecruiterResponse response = recruiterAdminService.blockRecruiter(id, block);
         return ResponseEntity.ok(response);
+    }
+    
+ 
+    
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
+    @GetMapping("/recruiter/{recruiterId}")
+    public ResponseEntity<List<JobResponse>> getJobsByRecruiter(
+            @PathVariable Long recruiterId
+    ) {
+        return ResponseEntity.ok(
+                recruiterAdminService.getJobsByRecruiter(recruiterId)
+        );
     }
 }

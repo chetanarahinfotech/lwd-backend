@@ -1,5 +1,6 @@
 package com.lwd.jobportal.authcontroller;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,15 +42,21 @@ public class AuthController {
     }
 
 
-    // ✅ LOGIN API
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> login(@RequestBody LoginRequest request) {
+    public ResponseEntity<?> login(@RequestBody LoginRequest request) {
 
-        String token = authService.login(
-                request.getEmail(),
-                request.getPassword()
-        );
+        try {
+            String token = authService.login(
+                    request.getEmail(),
+                    request.getPassword()
+            );
+            return ResponseEntity.ok(new JwtResponse(token));
 
-        return ResponseEntity.ok(new JwtResponse(token));
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(HttpStatus.FORBIDDEN)
+                    .body(e.getMessage());
+        }
     }
+
 }
