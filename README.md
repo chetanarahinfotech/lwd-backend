@@ -1,48 +1,89 @@
-﻿🧑‍💼 LWD Job Seeker Portal
+﻿# 🧑‍💼 LWD Job Seeker Portal
 
-A full-stack Job Portal application that connects Job Seekers, Companies, and Admins on a single secure platform.
-The system enables job searching, job posting, application tracking, and role-based management using Spring Boot & JWT Security.
+A full-stack Job Portal application that connects **Job Seekers**, **Companies**, and **Admins** on a single secure platform.  
+The system enables job searching, job posting, application tracking, and role-based management using **Spring Boot & JWT Security**.
 
-✨ Key Highlights
+---
 
-Secure authentication using JWT
+## ✨ Key Highlights
 
-Role-based access control (ADMIN / COMPANY / USER)
+- Secure authentication using JWT
+- Role-based access control (ADMIN / COMPANY / USER)
+- Clean layered architecture (Controller → Service → Repository)
+- Soft delete & audit support across entities
+- Scalable backend design, frontend-ready
 
-Clean layered architecture (Controller → Service → Repository)
+---
 
 Soft delete and audit support across entities
 
-Scalable backend design, frontend-ready
+## 🚀 Features
 
-🚀 Features
-👤 Job Seeker (User)
+### 👤 Job Seeker (User)
+- User registration & login (JWT-based)
+- View and search job listings
+- Apply for jobs
+- Track applied job status
+- Manage user profile
 
-User registration & login (JWT-based)
+### 🏢 Company
+- Company registration & authentication
+- Create and manage company profile
+- Post, update, activate/deactivate job listings
+- View applicants for posted jobs
+- Soft delete & active/inactive company support
 
-View and search job listings
+### 🛠️ Admin
+- Manage users, companies, and jobs
+- Monitor overall platform activity
+- Full role-based access control
 
-Apply for jobs
+---
 
-Track applied job status
+## 🔐 Security
+- JWT Authentication
+- Spring Security
+- Role-based Authorization  
+  **ADMIN | COMPANY | USER**
+- Secure RESTful APIs
 
-Manage user profile
+---
 
-🏢 Company
+## 🧱 Core Entities
+- User
+- Company
+- Job
+- JobApplication
 
-Company registration & authentication
+### 📌 Common Audit Fields
+- createdAt
+- updatedAt
+- createdBy
+- isActive (Soft delete support)
 
-Create and manage company profile
+---
 
-Post, update, activate/deactivate job listings
+## 🛠️ Tech Stack
 
-View applicants for posted jobs
+### 🔙 Backend
+- Java 17
+- Spring Boot
+- Spring Security
+- Spring Data JPA (Hibernate)
+
+### 🗄️ Database
+- MySQL
 
 Soft delete and active/inactive company support
 
-🛠️ Admin
+### 🧰 Tools
+- Maven
+- Postman
+- Git & GitHub
 
-Manage users, companies, and jobs
+---
+
+## 📂 Backend Project Structure
 
 Monitor overall platform activities
 
@@ -103,6 +144,7 @@ Postman
 Git & GitHub
 
 📂 Backend Project Structure
+
 com.lwd.jobportal
 │
 ├── controller
