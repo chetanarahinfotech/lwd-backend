@@ -13,6 +13,7 @@ import com.lwd.jobportal.companydto.CompanySummaryDTO;
 import com.lwd.jobportal.entity.*;
 import com.lwd.jobportal.enums.*;
 import com.lwd.jobportal.exception.BadRequestException;
+import com.lwd.jobportal.exception.ForbiddenActionException;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.exception.UnauthorizedException;
 import com.lwd.jobportal.jobapplicationdto.*;
@@ -31,23 +32,24 @@ public class JobApplicationService {
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
 
-    // ================= APPLY FOR JOB =================
+    
     public void applyForJob(JobApplicationRequest request, Long jobSeekerId) {
 
         Job job = jobRepository.findById(request.getJobId())
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
-        
+
         if (job.getStatus() != JobStatus.OPEN) {
             throw new BadRequestException("Job is not accepting applications");
         }
 
         User jobSeeker = userRepository.findById(jobSeekerId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new UnauthorizedException("User not found"));
 
-        if (jobApplicationRepository.existsByJobIdAndJobSeekerId(job.getId(), jobSeeker.getId())) {
+        if (jobApplicationRepository
+                .existsByJobIdAndJobSeekerId(job.getId(), jobSeeker.getId())) {
             throw new BadRequestException("You have already applied for this job");
         }
-        
+
         JobApplication application = JobApplication.builder()
                 .job(job)
                 .jobSeeker(jobSeeker)
@@ -64,6 +66,7 @@ public class JobApplicationService {
 
         jobApplicationRepository.save(application);
     }
+
 
     // ================= ADMIN: APPLICATIONS BY JOB =================
     @PreAuthorize("hasRole('ADMIN')")
@@ -93,7 +96,10 @@ public class JobApplicationService {
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
 
         if (!job.getCompany().getId().equals(company.getId())) {
-            throw new UnauthorizedException("You are not allowed to view applications for this job");
+        	throw new ForbiddenActionException(
+        	        "You are not allowed to view applications for this job"
+        	);
+
         }
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
@@ -127,7 +133,6 @@ public class JobApplicationService {
 
         JobApplication application = jobApplicationRepository.findById(applicationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
-
         // ADMIN → allow directly
         if (role == Role.ADMIN) {
             application.setStatus(newStatus);

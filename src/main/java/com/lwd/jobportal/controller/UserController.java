@@ -28,6 +28,14 @@ public class UserController {
                 userService.getUserById(userId)
         );
     }
+    
+    // Get profile by userId
+    @GetMapping("/{userId}")
+    public ResponseEntity<UserResponse> getUserProfileById(
+            @PathVariable Long userId) {
+
+        return ResponseEntity.ok(userService.getUserById(userId));
+    }
 
    
     @PutMapping("/update")
@@ -41,4 +49,6 @@ public class UserController {
                 userService.updateUser(userId, request)
         );
     }
+    
+   
 }

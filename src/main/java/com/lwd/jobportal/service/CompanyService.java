@@ -12,4 +12,6 @@ public interface CompanyService {
     CompanyResponse updateCompany(Long companyId, CreateCompanyRequest request);
 
     void deleteCompany(Long companyId);
+    
+    CompanyResponse getCompanyByCreatedBy(Long userId);
 }

@@ -21,7 +21,7 @@ public class RecruiterAdminController {
     private final RecruiterAdminService recruiterAdminService;
 
     // ================= LIST ALL RECRUITERS =================
-    @PreAuthorize("hasRole('RECRUITER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @GetMapping("/recruiters")
     public ResponseEntity<List<RecruiterResponse>> getRecruiters(){
         // The principal is the logged-in user's ID
@@ -33,7 +33,7 @@ public class RecruiterAdminController {
     }
     
     
-    @PreAuthorize("hasRole('RECRUITER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @GetMapping("/recruiters/pending")
     public ResponseEntity<List<RecruiterResponse>> getPendingRecruiters() {
 
@@ -48,11 +48,13 @@ public class RecruiterAdminController {
 
 
     // ================= APPROVE RECRUITER =================
-    @PreAuthorize("hasRole('RECRUITER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @PutMapping("/recruiters/{id}/approve")
     public ResponseEntity<RecruiterResponse> approveRecruiter(@PathVariable Long id) {
 
         Long adminId = SecurityUtils.getUserId();
+        
+        System.out.println("Approve request");
 
         RecruiterResponse response =
                 recruiterAdminService.approveRecruiter(id, adminId);
@@ -62,7 +64,7 @@ public class RecruiterAdminController {
 
 
     // ================= BLOCK / UNBLOCK RECRUITER =================
-    @PreAuthorize("hasRole('RECRUITER_ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @PutMapping("/recruiters/{id}/block")
     public ResponseEntity<RecruiterResponse> blockRecruiter(
             @PathVariable Long id,
@@ -75,7 +77,7 @@ public class RecruiterAdminController {
  
     
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
-    @GetMapping("/recruiter/{recruiterId}")
+    @GetMapping("/recruiter/{recruiterId}/jobs")
     public ResponseEntity<List<JobResponse>> getJobsByRecruiter(
             @PathVariable Long recruiterId
     ) {

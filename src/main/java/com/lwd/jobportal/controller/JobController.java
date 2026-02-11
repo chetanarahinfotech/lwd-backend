@@ -101,6 +101,17 @@ public class JobController {
     }
     
     // ==================================================
+    // GET JOB
+    // ==================================================
+    @GetMapping("/my-jobs")
+    public ResponseEntity<PagedJobResponse> getMyJobs(
+            @RequestParam(defaultValue = "0") int page
+    ) {
+        return ResponseEntity.ok(jobService.getMyJobs(page));
+    }
+
+    
+    // ==================================================
     // GET JOB BY ID (PUBLIC)
     // ==================================================
     @GetMapping("/{jobId}")

@@ -47,7 +47,8 @@ public class RecruiterAdminService {
                         .build())
                 .toList();
     }
-    
+
+
     
     @Transactional(readOnly = true)
     public List<RecruiterResponse> getPendingRecruiters(Long recruiterAdminId) {
@@ -79,6 +80,7 @@ public class RecruiterAdminService {
         if (recruiter.getRole() != Role.RECRUITER) {
             throw new IllegalArgumentException("User is not a recruiter");
         }
+        System.out.println("Approve request");
 
         // 2️⃣ Fetch company of logged-in RECRUITER_ADMIN
         Company company = companyRepository.findByCreatedById(recruiterAdminId)
@@ -159,6 +161,7 @@ public class RecruiterAdminService {
                 .createdBy(job.getCreatedBy().getEmail())
                 .minExperience(job.getMinExperience())   // new
                 .maxExperience(job.getMaxExperience())   // new
+                .createdAt(job.getCreatedAt())
                 .jobType(job.getJobType() != null ? job.getJobType().name() : null)  // new
                 .company(
                         CompanySummaryDTO.builder()

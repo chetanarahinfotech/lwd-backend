@@ -1,5 +1,7 @@
 package com.lwd.jobportal.jobdto;
 
+import java.time.LocalDateTime;
+
 import com.lwd.jobportal.companydto.CompanySummaryDTO;
 
 import lombok.Builder;
@@ -15,10 +17,11 @@ public class JobResponse {
     private Double salary;
     private String status;
     private String industry;
-    private CompanySummaryDTO company;
     private String createdBy;
     private Integer minExperience;
     private Integer maxExperience;
     private String jobType;
+    private LocalDateTime createdAt;
+    private CompanySummaryDTO company;
     
 }

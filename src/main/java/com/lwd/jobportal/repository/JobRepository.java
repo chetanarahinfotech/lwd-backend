@@ -24,6 +24,9 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 	Page<Job> findByCompanyId(Long companyId, Pageable pageable);
 	
     List<Job> findByCreatedById(Long userId);
+    Page<Job> findByCreatedById(Long userId, Pageable pageable);
+    
+    long countByCompanyId(Long companyId);
     
     List<Job> findByStatusAndCreatedAtLessThanOrderByCreatedAtDesc(
             JobStatus status,
