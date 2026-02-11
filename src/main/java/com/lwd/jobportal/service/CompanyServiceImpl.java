@@ -1,5 +1,6 @@
 package com.lwd.jobportal.service;
 
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -7,6 +8,8 @@ import com.lwd.jobportal.companydto.CompanyResponse;
 import com.lwd.jobportal.companydto.CreateCompanyRequest;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.exception.ForbiddenActionException;
+import com.lwd.jobportal.exception.InvalidOperationException;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.CompanyRepository;
 import com.lwd.jobportal.security.SecurityUtils;
@@ -19,19 +22,19 @@ import lombok.RequiredArgsConstructor;
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
-
+    
     @Override
     public CompanyResponse createCompany(CreateCompanyRequest request) {
 
         if (!SecurityUtils.hasRole(Role.ADMIN)
                 && !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
-            throw new IllegalArgumentException(
-                    "Only Admin or Recruiter Admin can create a company"
+            throw new ForbiddenActionException(
+                    "Only ADMIN or RECRUITER_ADMIN can create a company"
             );
         }
 
         if (companyRepository.existsByCompanyName(request.getCompanyName())) {
-            throw new IllegalArgumentException("Company already exists");
+            throw new InvalidOperationException("Company already exists");
         }
 
         Long userId = SecurityUtils.getUserId();
@@ -42,18 +45,32 @@ public class CompanyServiceImpl implements CompanyService {
                 .website(request.getWebsite())
                 .location(request.getLocation())
                 .logoUrl(request.getLogoUrl())
-                .createdById(userId)   // 🔥 store only ID (better performance)
+                .createdById(userId)
                 .isActive(true)
                 .build();
 
         return mapToResponse(companyRepository.save(company));
     }
 
+
     @Override
     public CompanyResponse getCompanyById(Long companyId) {
 
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+
+        return mapToResponse(company);
+    }
+    
+    @Override
+    public CompanyResponse getCompanyByCreatedBy(Long userId) {
+
+        Company company = companyRepository
+                .findByCreatedById(userId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Company not found for user id: " + userId
+                        ));
 
         return mapToResponse(company);
     }
@@ -66,23 +83,23 @@ public class CompanyServiceImpl implements CompanyService {
 
         Long userId = SecurityUtils.getUserId();
 
-        if (SecurityUtils.hasRole(Role.RECRUITER_ADMIN)
-                && !company.getCreatedById().equals(userId)) {
-            throw new IllegalArgumentException(
-                    "You can only update companies you created"
+        if (!SecurityUtils.hasRole(Role.ADMIN)
+                && !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
+            throw new ForbiddenActionException(
+                    "You do not have permission to update this company"
             );
         }
 
-        if (!SecurityUtils.hasRole(Role.ADMIN)
-                && !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
-            throw new IllegalArgumentException(
-                    "You do not have permission to update this company"
+        if (SecurityUtils.hasRole(Role.RECRUITER_ADMIN)
+                && !company.getCreatedById().equals(userId)) {
+            throw new ForbiddenActionException(
+                    "You can only update companies you created"
             );
         }
 
         if (!company.getCompanyName().equals(request.getCompanyName())
                 && companyRepository.existsByCompanyName(request.getCompanyName())) {
-            throw new IllegalArgumentException("Company name already exists");
+            throw new InvalidOperationException("Company name already exists");
         }
 
         company.setCompanyName(request.getCompanyName());
@@ -93,6 +110,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         return mapToResponse(companyRepository.save(company));
     }
+
 
     @Override
     public void deleteCompany(Long companyId) {
@@ -110,7 +128,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         if (SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
             if (!company.getCreatedById().equals(userId)) {
-                throw new IllegalArgumentException(
+                throw new ForbiddenActionException(
                         "You can only delete companies you created"
                 );
             }
@@ -119,10 +137,12 @@ public class CompanyServiceImpl implements CompanyService {
             return;
         }
 
-        throw new IllegalArgumentException(
+        throw new ForbiddenActionException(
                 "You do not have permission to delete this company"
         );
     }
+    
+
 
     private CompanyResponse mapToResponse(Company company) {
         return CompanyResponse.builder()
@@ -134,6 +154,8 @@ public class CompanyServiceImpl implements CompanyService {
                 .logoUrl(company.getLogoUrl())
                 .isActive(company.getIsActive())
                 .createdBy(company.getCreatedById())
+                .createdAt(company.getCreatedAt())
+                .updatedAt(company.getUpdatedAt())
                 .build();
     }
 }

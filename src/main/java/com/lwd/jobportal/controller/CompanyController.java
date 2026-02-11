@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.lwd.jobportal.companydto.CompanyResponse;
 import com.lwd.jobportal.companydto.CreateCompanyRequest;
+import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.CompanyService;
 
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,27 @@ public class CompanyController {
                 companyService.getCompanyById(id)
         );
     }
+    
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
+    @GetMapping("/my-company")
+    public ResponseEntity<CompanyResponse> getCompanyByCreatedBy() {
+    	
+    	Long userId = SecurityUtils.getUserId();
+
+        return ResponseEntity.ok(
+                companyService.getCompanyByCreatedBy(userId)
+        );
+    }
+    
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
+    @GetMapping("/created-by/{userId}")
+    public ResponseEntity<CompanyResponse> getCompanyByCreatedBy(
+            @PathVariable Long userId) {
+
+        return ResponseEntity.ok(
+                companyService.getCompanyByCreatedBy(userId)
+        );
+    }
 
     // ✅ UPDATE COMPANY
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
@@ -65,4 +87,5 @@ public class CompanyController {
 
         return ResponseEntity.noContent().build();
     }
+    
 }

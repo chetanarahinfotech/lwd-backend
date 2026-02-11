@@ -33,5 +33,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	        Long companyId,
 	        UserStatus status
 	);
+	
+	 long countByCompanyIdAndRole(Long companyId, Role role);
 
 }

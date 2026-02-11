@@ -10,9 +10,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.lwd.jobportal.entity.Company;
-import com.lwd.jobportal.entity.Job;
-import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.dto.admin.CompanyAdminDTO;
+import com.lwd.jobportal.dto.admin.JobAdminDTO;
+import com.lwd.jobportal.dto.admin.UserAdminDTO;
+import com.lwd.jobportal.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.service.AdminService;
 
 import lombok.RequiredArgsConstructor;
@@ -27,14 +28,14 @@ public class AdminController {
 
     // ================= USERS =================
     @GetMapping("/users")
-    public ResponseEntity<List<User>> getAllUsers() {
+    public ResponseEntity<List<UserAdminDTO>> getAllUsers() {
         return ResponseEntity.ok(adminService.getAllUsers());
     }
 
     @PatchMapping("/users/{id}/block")
     public ResponseEntity<String> blockUser(@PathVariable Long id) {
         adminService.blockUser(id);
-        return ResponseEntity.ok("User blocked");
+        return ResponseEntity.ok("User blocked");	
     }
 
     @PatchMapping("/users/{id}/unblock")
@@ -42,10 +43,21 @@ public class AdminController {
         adminService.unblockUser(id);
         return ResponseEntity.ok("User unblocked");
     }
+    
+    
+    // ================= GET RECRUITERS BY COMPANY ID =================
+    @GetMapping("/company/{companyId}/recruiters")
+    public ResponseEntity<List<RecruiterResponse>> getRecruitersByCompanyId(
+            @PathVariable Long companyId
+    ) {
+        return ResponseEntity.ok(
+                adminService.getRecruitersByCompanyId(companyId)
+        );
+    }
 
     // ================= COMPANIES =================
     @GetMapping("/companies")
-    public ResponseEntity<List<Company>> getAllCompanies() {
+    public ResponseEntity<List<CompanyAdminDTO>> getAllCompanies() {
         return ResponseEntity.ok(adminService.getAllCompanies());
     }
 
@@ -61,9 +73,10 @@ public class AdminController {
         return ResponseEntity.ok("Company unblocked");
     }
 
+
     // ================= JOBS =================
     @GetMapping("/jobs")
-    public ResponseEntity<List<Job>> getAllJobs() {
+    public ResponseEntity<List<JobAdminDTO>> getAllJobs() {
         return ResponseEntity.ok(adminService.getAllJobs());
     }
 

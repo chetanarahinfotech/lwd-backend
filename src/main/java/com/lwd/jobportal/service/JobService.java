@@ -143,6 +143,59 @@ public class JobService {
         return mapToResponse(jobRepository.save(job));
     }
     
+    
+    // ==================================================
+    // GET JOBS
+    // ==================================================
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    public PagedJobResponse getMyJobs(int page) {
+
+        Long userId = SecurityUtils.getUserId();
+        Role role = SecurityUtils.getRole();
+
+        Pageable pageable = PageRequest.of(
+                page,
+                10,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<JobResponse> jobPage;
+
+        // ================= ADMIN =================
+        if (role == Role.ADMIN) {
+
+            jobPage = jobRepository
+                    .findAll(pageable)
+                    .map(this::mapToResponse);
+        }
+        // ================= RECRUITER_ADMIN =================
+        else if (role == Role.RECRUITER_ADMIN) {
+
+            Company company = companyRepository
+                    .findByCreatedById(userId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Company not found for recruiter admin"));
+
+            jobPage = jobRepository
+                    .findByCompanyId(company.getId(), pageable)
+                    .map(this::mapToResponse);
+        }
+        // ================= RECRUITER =================
+        else if (role == Role.RECRUITER) {
+
+            jobPage = jobRepository
+                    .findByCreatedById(userId, pageable)
+                    .map(this::mapToResponse);
+        }
+        // ================= INVALID =================
+        else {
+            throw new AccessDeniedException("Unauthorized role");
+        }
+
+        return toPagedResponse(jobPage);
+    }
+
+    
 
     // ==================================================
     // READ APIs
@@ -411,7 +464,7 @@ public class JobService {
                 .industry(request.getIndustry())
                 .minExperience(request.getMinExperience())   // new
                 .maxExperience(request.getMaxExperience())   // new
-                .jobType(request.getJobType())               // new
+                .jobType(request.getJobType())              // new
                 .company(company)
                 .createdBy(creator)
                 .build();
@@ -442,6 +495,7 @@ public class JobService {
                 .status(job.getStatus().name())
                 .industry(job.getIndustry())
                 .createdBy(job.getCreatedBy().getEmail())
+                .createdAt(job.getCreatedAt())
                 .minExperience(job.getMinExperience())   // new
                 .maxExperience(job.getMaxExperience())   // new
                 .jobType(job.getJobType() != null ? job.getJobType().name() : null)  // new

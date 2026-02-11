@@ -54,6 +54,7 @@ public class UserService {
                 .phone(user.getPhone())
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
+                .companyName(user.getCompany() != null ? user.getCompany().getCompanyName() : "")
                 .build();
     }
 }

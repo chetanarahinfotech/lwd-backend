@@ -1,5 +1,7 @@
 package com.lwd.jobportal.companydto;
 
+import java.time.LocalDateTime;
+
 import lombok.Builder;
 import lombok.Data;
 
@@ -14,5 +16,7 @@ public class CompanyResponse {
     private String location;
     private String logoUrl;
     private Boolean isActive;
-    private Long createdBy; // recruiter email or name
+    private Long createdBy;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }
