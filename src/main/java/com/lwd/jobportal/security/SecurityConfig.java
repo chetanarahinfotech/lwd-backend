@@ -16,6 +16,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
+
 @Configuration
 @EnableMethodSecurity(prePostEnabled = true) // Needed for @PreAuthorize
 public class SecurityConfig {
@@ -36,8 +37,10 @@ public class SecurityConfig {
                     .requestMatchers("/api/auth/**").permitAll()
                     .requestMatchers("/api/users/**").authenticated()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                    .requestMatchers("/api/companies/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
+//                    .requestMatchers("/api/companies/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
+                    .requestMatchers("/api/companies/**").permitAll()
                     .requestMatchers("/api/recruiter-admin/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
+                    .requestMatchers("/api/jobs/**").permitAll()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

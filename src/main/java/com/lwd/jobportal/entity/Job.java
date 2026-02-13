@@ -10,21 +10,26 @@ import com.lwd.jobportal.enums.JobType;
 
 @Entity
 @Table(
-    name = "jobs",
-    indexes = {
-        // Latest jobs
-        @Index(
-            name = "idx_jobs_status_created_at",
-            columnList = "status, created_at"
-        ),
-        // Search optimization
-        @Index(
-            name = "idx_jobs_location_type_exp",
-            columnList = "location, job_type, min_experience"
-        ),
-        @Index(name = "idx_jobs_industry", columnList = "industry")
-    }
-)
+	    name = "jobs",
+	    indexes = {
+
+	        // Latest jobs (pagination & feed)
+	        @Index(
+	            name = "idx_jobs_status_created_at",
+	            columnList = "status, created_at"
+	        ),
+
+	        // AUTOCOMPLETE & SEARCH (single-column indexes)
+	        @Index(name = "idx_jobs_title", columnList = "title"),
+	        @Index(name = "idx_jobs_location", columnList = "location"),
+	        @Index(name = "idx_jobs_industry", columnList = "industry"),
+
+	        // Filters
+	        @Index(name = "idx_jobs_job_type", columnList = "job_type"),
+	        @Index(name = "idx_jobs_min_exp", columnList = "min_experience")
+	    }
+	)
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

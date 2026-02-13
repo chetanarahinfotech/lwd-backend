@@ -173,6 +173,54 @@ public class JobApplicationService {
     }
     
     
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    @Transactional(readOnly = true)
+    public PagedApplicationsResponse getApplicationsByRole(
+            Long userId,
+            Role role,
+            int page,
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("appliedAt").descending()
+        );
+
+        Page<JobApplication> applications;
+
+        // ================= ADMIN =================
+        if (role == Role.ADMIN) {
+            applications = jobApplicationRepository.findAll(pageable);
+        }
+
+        // ================= RECRUITER_ADMIN =================
+        else if (role == Role.RECRUITER_ADMIN) {
+
+            Company company = companyRepository.findByCreatedById(userId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Company not found for recruiter admin"));
+
+            applications = jobApplicationRepository
+                    .findByJobCompanyId(company.getId(), pageable);
+        }
+
+        // ================= RECRUITER =================
+        else if (role == Role.RECRUITER) {
+
+            applications = jobApplicationRepository
+                    .findByJobCreatedById(userId, pageable);
+        }
+
+        // ================= INVALID =================
+        else {
+            throw new AccessDeniedException("Invalid role");
+        }
+
+        return buildPagedResponse(applications);
+    }
+
+    
 
     // ================= HELPER: BUILD PAGED RESPONSE =================
     private PagedApplicationsResponse buildPagedResponse(Page<JobApplication> page) {

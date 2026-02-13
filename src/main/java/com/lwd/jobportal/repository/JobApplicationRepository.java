@@ -22,6 +22,15 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             Long companyId,
             Pageable pageable
     );
+    
+    // ADMIN → all applications
+    Page<JobApplication> findAll(Pageable pageable);
+
+    // RECRUITER_ADMIN → company jobs
+    Page<JobApplication> findByJobCompanyId(Long companyId, Pageable pageable);
+
+    // RECRUITER → only jobs created by this recruiter
+    Page<JobApplication> findByJobCreatedById(Long userId, Pageable pageable);
 
     // 🔹 Job Seeker: my applications (paginated)
     Page<JobApplication> findByJobSeekerId(Long jobSeekerId, Pageable pageable);
@@ -40,11 +49,6 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     Page<JobApplication> findByIdAndJobSeekerId(
             Long id,
             Long jobSeekerId,
-            Pageable pageable
-    );
-    
-    Page<JobApplication> findByJobCompanyId(
-            Long companyId,
             Pageable pageable
     );
 

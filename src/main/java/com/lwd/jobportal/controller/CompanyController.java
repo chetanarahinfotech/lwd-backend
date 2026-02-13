@@ -2,6 +2,8 @@ package com.lwd.jobportal.controller;
 
 import jakarta.validation.Valid;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,14 +45,22 @@ public class CompanyController {
         );
     }
     
-    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
+    @GetMapping
+    public ResponseEntity<List<CompanyResponse>> getAllCompany() {
+
+        return ResponseEntity.ok(
+                companyService.getAllCompany()
+        );
+    }
+    
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
     @GetMapping("/my-company")
-    public ResponseEntity<CompanyResponse> getCompanyByCreatedBy() {
+    public ResponseEntity<CompanyResponse> getMyCompanyBy() {
     	
     	Long userId = SecurityUtils.getUserId();
 
         return ResponseEntity.ok(
-                companyService.getCompanyByCreatedBy(userId)
+                companyService.getMyCompanyBy(userId)
         );
     }
     

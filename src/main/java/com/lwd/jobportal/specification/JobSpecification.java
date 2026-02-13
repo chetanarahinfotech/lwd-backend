@@ -13,45 +13,66 @@ import java.util.List;
 public class JobSpecification {
 
     public static Specification<Job> searchJobs(
-            String title,
+            String keyword,
             String location,
             String companyName,
             Integer minExp,
             Integer maxExp,
             JobType jobType
     ) {
-        return (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
+    	return (root, query, cb) -> {
 
-            if (title != null && !title.isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("title")), "%" + title.toLowerCase() + "%"));
-            }
+    	    query.distinct(true);   // 🔥 Prevent duplicate jobs
 
-            if (location != null && !location.isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.get("location")), "%" + location.toLowerCase() + "%"));
-            }
+    	    List<Predicate> predicates = new ArrayList<>();
 
-            if (companyName != null && !companyName.isEmpty()) {
-                predicates.add(cb.like(cb.lower(root.join("company").get("companyName")), "%" + companyName.toLowerCase() + "%"));
-            }
+    	    // Use LEFT JOIN once
+    	    var companyJoin = root.join("company", jakarta.persistence.criteria.JoinType.LEFT);
 
-            if (minExp != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("minExperience"), minExp));
-            }
+    	    if (keyword != null && !keyword.isEmpty()) {
 
-            if (maxExp != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("maxExperience"), maxExp));
-            }
+    	        String pattern = "%" + keyword.toLowerCase() + "%";
 
-            
-            if (jobType != null) {
-                predicates.add(cb.equal(
-                    root.get("jobType"), jobType
-                ));
-            }
+    	        Predicate titleMatch =
+    	                cb.like(cb.lower(root.get("title")), pattern);
 
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+    	        Predicate locationMatch =
+    	                cb.like(cb.lower(root.get("location")), pattern);
+
+    	        Predicate companyMatch =
+    	                cb.like(cb.lower(companyJoin.get("companyName")), pattern);
+
+    	        Predicate jobTypeMatch =
+    	                cb.like(cb.lower(root.get("jobType").as(String.class)), pattern);
+
+    	        predicates.add(cb.or(titleMatch, locationMatch, companyMatch, jobTypeMatch));
+    	    }
+
+    	    if (location != null && !location.isEmpty()) {
+    	        predicates.add(cb.like(cb.lower(root.get("location")),
+    	                "%" + location.toLowerCase() + "%"));
+    	    }
+
+    	    if (companyName != null && !companyName.isEmpty()) {
+    	        predicates.add(cb.like(cb.lower(companyJoin.get("companyName")),
+    	                "%" + companyName.toLowerCase() + "%"));
+    	    }
+
+    	    if (minExp != null) {
+    	        predicates.add(cb.greaterThanOrEqualTo(root.get("minExperience"), minExp));
+    	    }
+
+    	    if (maxExp != null) {
+    	        predicates.add(cb.lessThanOrEqualTo(root.get("maxExperience"), maxExp));
+    	    }
+
+    	    if (jobType != null) {
+    	        predicates.add(cb.equal(root.get("jobType"), jobType));
+    	    }
+
+    	    return cb.and(predicates.toArray(new Predicate[0]));
+    	};
+
     }
     
     

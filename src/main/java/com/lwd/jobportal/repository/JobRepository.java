@@ -2,7 +2,6 @@ package com.lwd.jobportal.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
+import com.lwd.jobportal.specification.IndustryCount;
 
 @Repository
 public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificationExecutor<Job> {
@@ -63,15 +63,22 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     
     @Query("""
     	    SELECT j FROM Job j
-    	    WHERE j.status = 'OPEN'
-    	    AND j.location = :location
-    	    AND j.industry = :industry
-    	    ORDER BY j.createdAt DESC
+    	    WHERE j.id NOT IN (
+    	        SELECT a.job.id FROM JobApplication a WHERE a.jobSeeker.id = :userId
+    	    )
+    	      AND (j.industry = :industry OR j.location = :location)
+    	    ORDER BY 
+    	        CASE 
+    	            WHEN j.industry = :industry THEN 0
+    	            ELSE 1
+    	        END,
+    	        j.createdAt DESC
     	""")
-    	List<Job> findSuggestedJobs(
-    	        @Param("location") String location,
-    	        @Param("industry") String industry
-    	);
+    	List<Job> findSuggestedJobs(@Param("userId") Long userId,
+    	                            @Param("industry") String industry,
+    	                            @Param("location") String location,
+    	                            Pageable pageable);
+
 
     
     @Query("""
@@ -79,7 +86,8 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     	    WHERE a.jobSeeker.id = :userId
     	    ORDER BY a.appliedAt DESC
     	""")
-    	Optional<Job> findLastAppliedJob(@Param("userId") Long userId);
+    	List<Job> findJobsByUserIdOrderByAppliedAtDesc(Long userId);
+
 
     
     @Query("""
@@ -95,12 +103,38 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     	        @Param("jobId") Long jobId
     	);
 
+    @Query("""
+    	    SELECT DISTINCT j.title
+    	    FROM Job j
+    	    WHERE LOWER(j.title) LIKE LOWER(CONCAT(:keyword, '%'))
+    	""")
+    	List<String> findTitleSuggestions(@Param("keyword") String keyword, Pageable pageable);
+
+
     
     @Query("""
-    	    SELECT DISTINCT j.title FROM Job j
-    	    WHERE LOWER(j.title) LIKE %:keyword%
+    	    SELECT DISTINCT j.location
+    	    FROM Job j
+    	    WHERE LOWER(j.location) LIKE LOWER(CONCAT(:keyword, '%'))
     	""")
-    	List<String> findTitleSuggestions(@Param("keyword") String keyword);
+    	List<String> findLocationSuggestions(@Param("keyword") String keyword, Pageable pageable);
+    
+
+    @Query("""
+    	    SELECT DISTINCT j.company.companyName
+    	    FROM Job j
+    	    WHERE LOWER(j.company.companyName) LIKE LOWER(CONCAT(:keyword, '%'))
+    	""")
+    	List<String> findCompanySuggestions(@Param("keyword") String keyword, Pageable pageable);
+    
+
+    @Query("""
+    	    SELECT DISTINCT j.industry
+    	    FROM Job j
+    	    WHERE LOWER(j.industry) LIKE LOWER(CONCAT(:keyword, '%'))
+    	""")
+    	List<String> findIndustrySuggestions(@Param("keyword") String keyword, Pageable pageable);
+
 
     
     @Query("""
@@ -110,6 +144,14 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     	""")
     	List<Job> findTrendingJobs(Pageable pageable);
 
-    
+    @Query("""
+    	       SELECT j.industry AS industry, COUNT(j) AS count
+    	       FROM Job j
+    	       WHERE j.status = 'OPEN'
+    	       GROUP BY j.industry
+    	       ORDER BY COUNT(j) DESC
+    	       """)
+    	List<IndustryCount> findTopIndustries(Pageable pageable);
+
 
 }

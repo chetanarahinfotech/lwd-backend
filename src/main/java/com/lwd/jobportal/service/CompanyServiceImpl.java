@@ -1,17 +1,21 @@
 package com.lwd.jobportal.service;
 
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lwd.jobportal.companydto.CompanyResponse;
 import com.lwd.jobportal.companydto.CreateCompanyRequest;
 import com.lwd.jobportal.entity.Company;
+import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.exception.ForbiddenActionException;
 import com.lwd.jobportal.exception.InvalidOperationException;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.CompanyRepository;
+import com.lwd.jobportal.repository.UserRepository;
 import com.lwd.jobportal.security.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,7 @@ import lombok.RequiredArgsConstructor;
 public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
+    private final UserRepository userRepository;
     
     @Override
     public CompanyResponse createCompany(CreateCompanyRequest request) {
@@ -63,17 +68,70 @@ public class CompanyServiceImpl implements CompanyService {
     }
     
     @Override
-    public CompanyResponse getCompanyByCreatedBy(Long userId) {
+    public List<CompanyResponse> getAllCompany() {
+        List<Company> companies = companyRepository.findAll();
+        return companies.stream()
+                .map(this::mapToResponse) // map each Company to CompanyResponse
+                .toList();
+    }
 
-        Company company = companyRepository
-                .findByCreatedById(userId)
+    
+
+
+	@Override
+    public CompanyResponse getMyCompanyBy(Long userId) {
+
+        // ADMIN / RECRUITER_ADMIN
+        if (SecurityUtils.hasRole(Role.ADMIN) ||
+            SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
+
+            return companyRepository.findByCreatedById(userId)
+                    .map(this::mapToResponse)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Company not found"));
+        }
+
+        // RECRUITER
+        if (SecurityUtils.hasRole(Role.RECRUITER)) {
+
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("User not found"));
+
+            Company company = user.getCompany();
+
+            if (company == null) {
+                throw new ResourceNotFoundException(
+                        "Recruiter is not assigned to any company");
+            }
+
+            return mapToResponse(company);
+        }
+
+        // Other roles
+        throw new ForbiddenActionException("Access Denied");
+    }
+    
+    @Override
+    public CompanyResponse getCompanyByCreatedBy(Long userId) {
+    	
+    	if (!SecurityUtils.hasRole(Role.ADMIN) &&
+    		    !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
+
+    		    throw new ForbiddenActionException("Access Denied");
+    		}
+
+
+        return companyRepository.findByCreatedById(userId)
+                .map(this::mapToResponse)
                 .orElseThrow(() ->
                         new ResourceNotFoundException(
                                 "Company not found for user id: " + userId
-                        ));
-
-        return mapToResponse(company);
+                        )
+                );
     }
+
+
 
     @Override
     public CompanyResponse updateCompany(Long companyId, CreateCompanyRequest request) {
@@ -158,4 +216,5 @@ public class CompanyServiceImpl implements CompanyService {
                 .updatedAt(company.getUpdatedAt())
                 .build();
     }
+
 }

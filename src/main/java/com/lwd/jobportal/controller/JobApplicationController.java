@@ -23,19 +23,6 @@ public class JobApplicationController {
 
     private final JobApplicationService jobApplicationService;
 
-    // ================= APPLY FOR JOB =================
-    @PreAuthorize("hasRole('JOB_SEEKER')")
-    @PostMapping("/apply")
-    public ResponseEntity<String> applyForJob(
-            @Valid @RequestBody JobApplicationRequest request,
-            Authentication authentication
-    ) {
-        Long jobSeekerId = (Long) authentication.getPrincipal();
-        jobApplicationService.applyForJob(request, jobSeekerId);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body("Job application submitted successfully");
-    }
-
     // ================= ADMIN ENDPOINTS =================
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin/job/{jobId}")
@@ -75,7 +62,7 @@ public class JobApplicationController {
             Authentication authentication
     ) {
         
-    	Long userId = (Long) authentication.getPrincipal();
+    	Long userId = SecurityUtils.getUserId();
         PagedApplicationsResponse response =
                 jobApplicationService.getApplicationsByJobCompany(jobId, userId, page, size);
 
@@ -90,12 +77,45 @@ public class JobApplicationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = SecurityUtils.getUserId();
         PagedApplicationsResponse response =
                 jobApplicationService.getMyCompanyApplications(userId, page, size);
         return ResponseEntity.ok(response);
     }
     
+    
+    
+    @GetMapping("/my-applications")
+    public ResponseEntity<PagedApplicationsResponse> getApplicationsByRole(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Long userId = SecurityUtils.getUserId();
+        Role role = SecurityUtils.getRole();
+
+        return ResponseEntity.ok(
+                jobApplicationService.getApplicationsByRole(
+                        userId,
+                        role,
+                        page,
+                        size
+                )
+        );
+    }
+    
+    
+    // ================= APPLY FOR JOB =================
+    @PreAuthorize("hasRole('JOB_SEEKER')")
+    @PostMapping("/apply")
+    public ResponseEntity<String> applyForJob(
+            @Valid @RequestBody JobApplicationRequest request,
+            Authentication authentication
+    ) {
+        Long jobSeekerId = SecurityUtils.getUserId();
+        jobApplicationService.applyForJob(request, jobSeekerId);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body("Job application submitted successfully");
+    }
 
 
     // ================= JOB SEEKER ENDPOINTS =================
@@ -106,7 +126,7 @@ public class JobApplicationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        Long jobSeekerId = (Long) authentication.getPrincipal();
+        Long jobSeekerId = SecurityUtils.getUserId();
         PagedApplicationsResponse response =
                 jobApplicationService.getMyApplications(jobSeekerId, page, size);
         return ResponseEntity.ok(response);

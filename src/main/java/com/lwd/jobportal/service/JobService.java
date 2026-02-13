@@ -1,6 +1,7 @@
 package com.lwd.jobportal.service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.domain.*;
@@ -19,6 +20,7 @@ import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.jobdto.*;
 import com.lwd.jobportal.repository.*;
 import com.lwd.jobportal.security.SecurityUtils;
+import com.lwd.jobportal.specification.IndustryCount;
 import com.lwd.jobportal.specification.JobSpecification;
 
 import lombok.RequiredArgsConstructor;
@@ -274,6 +276,18 @@ public class JobService {
     }
     
     
+    public List<String> getTopIndustries(int limit) {
+
+        Pageable pageable = PageRequest.of(0, limit);
+
+        return jobRepository.findTopIndustries(pageable)
+                .stream()
+                .map(IndustryCount::getIndustry)
+                .toList();
+    }
+
+    
+    
     public PagedJobResponse getJobsByIndustry(String industry, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
@@ -299,7 +313,7 @@ public class JobService {
     // SEARCH JOBS
     // ==================================================
     public PagedJobResponse searchJobs(
-            String title,
+    		String keyword,
             String location,
             String companyName,
             Integer minExp,
@@ -317,7 +331,7 @@ public class JobService {
 
         Page<Job> jobPage = jobRepository.findAll(
                 JobSpecification.searchJobs(
-                        title,
+                        keyword,
                         location,
                         companyName,
                         minExp,
@@ -374,21 +388,39 @@ public class JobService {
         return toPagedResponse(jobPage.map(this::mapToResponse));
     }
     
-    public List<JobResponse> getSuggestedJobs(Long userId) {
 
-        // Fetch last applied job
-        Job lastAppliedJob = jobRepository.findLastAppliedJob(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("No job history found"));
+    public PagedJobResponse getSuggestedJobs(Long userId, int page, int size) {
+        // 1️⃣ Get last applied job
+        List<Job> appliedJobs = jobRepository.findJobsByUserIdOrderByAppliedAtDesc(userId);
+        if (appliedJobs.isEmpty()) {
+            throw new ResourceNotFoundException("No job history found");
+        }
+        Job lastAppliedJob = appliedJobs.get(0);
 
-        return jobRepository.findSuggestedJobs(
-                        lastAppliedJob.getLocation(),
-                        lastAppliedJob.getIndustry()
-                )
-                .stream()
-                .limit(10)
+        // 2️⃣ Fetch suggested jobs with single query
+        List<Job> suggestedJobs = jobRepository.findSuggestedJobs(
+                userId,
+                lastAppliedJob.getIndustry(),
+                lastAppliedJob.getLocation(),
+                PageRequest.of(page, size)
+        );
+
+        // 3️⃣ Convert to JobResponse
+        List<JobResponse> jobResponses = suggestedJobs.stream()
                 .map(this::mapToResponse)
                 .toList();
+
+        // 4️⃣ Wrap in Page object (for convenience)
+        Page<JobResponse> jobPage = new PageImpl<>(
+                jobResponses,
+                PageRequest.of(page, size),
+                suggestedJobs.size() // For real pagination, consider separate count query
+        );
+
+        // 5️⃣ Convert to PagedJobResponse DTO
+        return toPagedResponse(jobPage);
     }
+
 
     
     public List<JobResponse> getSimilarJobs(Long jobId) {
@@ -408,8 +440,42 @@ public class JobService {
     
     public List<String> getSearchSuggestions(String keyword) {
 
-        return jobRepository.findTitleSuggestions(keyword.toLowerCase());
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return List.of();
+        }
+
+        String lowerKeyword = keyword.toLowerCase().trim();
+        Pageable limit = PageRequest.of(0, 3); // max 3 from each category
+
+        List<String> suggestions = new ArrayList<>(10);
+
+        // 1️⃣ Title
+        suggestions.addAll(
+                jobRepository.findTitleSuggestions(lowerKeyword, limit)
+        );
+
+        // 2️⃣ Location
+        suggestions.addAll(
+                jobRepository.findLocationSuggestions(lowerKeyword, limit)
+        );
+
+        // 3️⃣ Company
+        suggestions.addAll(
+                jobRepository.findCompanySuggestions(lowerKeyword, limit)
+        );
+
+        // 4️⃣ Industry
+        suggestions.addAll(
+                jobRepository.findIndustrySuggestions(lowerKeyword, limit)
+        );
+
+        return suggestions.stream()
+                .distinct()
+                .limit(10)
+                .toList();
     }
+
+
 
     
     public List<JobResponse> getTrendingJobs() {

@@ -1,6 +1,9 @@
 package com.lwd.jobportal.service;
 
 import com.lwd.jobportal.companydto.CreateCompanyRequest;
+
+import java.util.List;
+
 import com.lwd.jobportal.companydto.CompanyResponse;
 
 public interface CompanyService {
@@ -13,5 +16,9 @@ public interface CompanyService {
 
     void deleteCompany(Long companyId);
     
+    CompanyResponse getMyCompanyBy(Long userId);
+    
     CompanyResponse getCompanyByCreatedBy(Long userId);
+
+    List<CompanyResponse> getAllCompany();
 }

@@ -141,11 +141,37 @@ public class JobController {
     // ==================================================
     @GetMapping
     public ResponseEntity<PagedJobResponse> getAllJobs(
-            @RequestParam(defaultValue = "0") int page
+    		@RequestParam(defaultValue = "0") int page,
+    	    @RequestParam(defaultValue = "6") int size
     ) {
         return ResponseEntity.ok(
                 jobService.getAllJobs(page)
         );
+    }
+    
+    // ==================================================
+    // GET INDUSTRY CATEGORIES
+    // ==================================================
+    @GetMapping("/top-categories")
+    public ResponseEntity<List<String>> getTopCategories(
+            @RequestParam(defaultValue = "6") int limit
+    ) {
+        return ResponseEntity.ok(
+                jobService.getTopIndustries(limit)
+        );
+    }
+
+    
+    // ==================================================
+    // GET JOBS BY INDUSTRY (PUBLIC)
+    // ==================================================
+    @GetMapping("/industry")
+    public ResponseEntity<PagedJobResponse> getJobsByIndustry(
+            @RequestParam String industry,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(jobService.getJobsByIndustry(industry, page, size));
     }
 
     // ==================================================
@@ -165,17 +191,7 @@ public class JobController {
         );
     }
     
-    // ==================================================
-    // GET JOBS BY INDUSTRY (PUBLIC)
-    // ==================================================
-    @GetMapping("/industry")
-    public ResponseEntity<PagedJobResponse> getJobsByIndustry(
-            @RequestParam String industry,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        return ResponseEntity.ok(jobService.getJobsByIndustry(industry, page, size));
-    }
+
 
 
     // ==================================================
@@ -183,7 +199,7 @@ public class JobController {
     // ==================================================
     @GetMapping("/search")
     public ResponseEntity<PagedJobResponse> searchJobs(
-            @RequestParam(required = false) String title,
+            @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String location,
             @RequestParam(required = false) String companyName,
             @RequestParam(required = false) Integer minExp,
@@ -194,7 +210,7 @@ public class JobController {
     ) {
         return ResponseEntity.ok(
                 jobService.searchJobs(
-                        title,
+                        keyword,
                         location,
                         companyName,
                         minExp,
@@ -203,6 +219,15 @@ public class JobController {
                         page,
                         size
                 )
+        );
+    }
+    
+    @GetMapping("/suggestions")
+    public ResponseEntity<List<String>> getSearchSuggestions(
+            @RequestParam String keyword
+    ) {
+        return ResponseEntity.ok(
+                jobService.getSearchSuggestions(keyword)
         );
     }
     
@@ -241,14 +266,17 @@ public class JobController {
         );
     }
     
-    @PreAuthorize("hasRole('USER')")
+    
     @GetMapping("/suggested")
-    public ResponseEntity<List<JobResponse>> getSuggestedJobs() {
+    public ResponseEntity<PagedJobResponse> getSuggestedJobs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         Long userId = SecurityUtils.getUserId();
-        return ResponseEntity.ok(
-                jobService.getSuggestedJobs(userId)
-        );
+        PagedJobResponse response = jobService.getSuggestedJobs(userId, page, size);
+        return ResponseEntity.ok(response);
     }
+
     
     @GetMapping("/{jobId}/similar")
     public ResponseEntity<List<JobResponse>> getSimilarJobs(
@@ -260,15 +288,6 @@ public class JobController {
     }
 
     
-    @GetMapping("/suggestions")
-    public ResponseEntity<List<String>> getSearchSuggestions(
-            @RequestParam String keyword
-    ) {
-        return ResponseEntity.ok(
-                jobService.getSearchSuggestions(keyword)
-        );
-    }
-    
     @GetMapping("/trending")
     public ResponseEntity<List<JobResponse>> getTrendingJobs() {
         return ResponseEntity.ok(
@@ -276,16 +295,6 @@ public class JobController {
         );
     }
 
-    
-//    @GetMapping("/location/{city}")
-//    public ResponseEntity<PagedJobResponse> getJobsByCity(
-//            @PathVariable String city,
-//            @RequestParam(defaultValue = "0") int page
-//    ) {
-//        return ResponseEntity.ok(
-//                jobService.getJobsByCity(city, page)
-//        );
-//    }
 
 
 
