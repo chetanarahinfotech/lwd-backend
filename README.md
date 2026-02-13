@@ -128,7 +128,7 @@ IDE (IntelliJ IDEA / Eclipse)
 
 ## 🧩 Steps to Run
 ### 1️⃣ Clone the repository
-git clone https://github.com/chetanarahinfotech/lwd-job-portal
+git clone https://github.com/chetanarahinfotech/lwd-backend
 
 ### 2️⃣ Configure MySQL
 
