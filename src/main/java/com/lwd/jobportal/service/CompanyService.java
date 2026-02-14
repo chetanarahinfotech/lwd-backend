@@ -1,10 +1,9 @@
 package com.lwd.jobportal.service;
 
-import com.lwd.jobportal.companydto.CreateCompanyRequest;
-
 import java.util.List;
 
-import com.lwd.jobportal.companydto.CompanyResponse;
+import com.lwd.jobportal.dto.companydto.CompanyResponse;
+import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
 
 public interface CompanyService {
 
@@ -21,4 +20,6 @@ public interface CompanyService {
     CompanyResponse getCompanyByCreatedBy(Long userId);
 
     List<CompanyResponse> getAllCompany();
+
+    List<CompanyResponse> getCompanyByIndustry();
 }

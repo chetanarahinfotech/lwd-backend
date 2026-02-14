@@ -5,15 +5,15 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.lwd.jobportal.companydto.CompanySummaryDTO;
+import com.lwd.jobportal.dto.companydto.CompanySummaryDTO;
+import com.lwd.jobportal.dto.jobdto.JobResponse;
+import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
-import com.lwd.jobportal.jobdto.JobResponse;
-import com.lwd.jobportal.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.repository.CompanyRepository;
 import com.lwd.jobportal.repository.JobRepository;
 import com.lwd.jobportal.repository.UserRepository;
@@ -60,7 +60,7 @@ public class RecruiterAdminService {
                 .findByRoleAndCompanyIdAndStatus(
                         Role.RECRUITER,
                         company.getId(),
-                        UserStatus.PENDING
+                        UserStatus.PENDING_APPROVAL
                 );
 
         return recruiters.stream()
@@ -108,7 +108,7 @@ public class RecruiterAdminService {
             throw new IllegalArgumentException("User is not a recruiter");
         }
 
-        recruiter.setStatus(block ? UserStatus.BLOCKED : UserStatus.ACTIVE);
+        recruiter.setStatus(block ? UserStatus.SUSPENDED : UserStatus.ACTIVE);
         userRepository.save(recruiter);
 
         return mapToResponse(recruiter);

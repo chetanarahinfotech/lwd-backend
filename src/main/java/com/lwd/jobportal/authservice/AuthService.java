@@ -1,18 +1,27 @@
 package com.lwd.jobportal.authservice;
 
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.lwd.jobportal.authdto.RegisterRequest;
+import com.lwd.jobportal.dto.authdto.RegisterRequest;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
+import com.lwd.jobportal.exception.AccountDisabledException;
+import com.lwd.jobportal.exception.AccountLockedException;
+import com.lwd.jobportal.exception.UserAlreadyExistsException;
 import com.lwd.jobportal.repository.UserRepository;
 import com.lwd.jobportal.security.JwtUtil;
 
+import lombok.RequiredArgsConstructor;
+
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -20,67 +29,63 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
 
-    public AuthService(
-            UserRepository userRepository,
-            PasswordEncoder passwordEncoder,
-            AuthenticationManager authenticationManager,
-            JwtUtil jwtUtil
-    ) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.authenticationManager = authenticationManager;
-        this.jwtUtil = jwtUtil;
-    }
+    // ================= REGISTER JOB SEEKER =================
+    public User registerJobSeeker(RegisterRequest request) {
 
-    // ✅ REGISTER USER FROM DTO
-    public User registerUser(RegisterRequest request) {
-
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already registered");
-        }
-
-        Role role = Role.valueOf(request.getRole().toUpperCase());
-
-        UserStatus status;
-        switch (role) {
-            case RECRUITER:
-                status = UserStatus.PENDING; // Needs approval by RECRUITER_ADMIN
-                break;
-            case JOB_SEEKER:
-            case RECRUITER_ADMIN:
-            case ADMIN:
-                status = UserStatus.ACTIVE;  // Active immediately
-                break;
-            default:
-                throw new IllegalArgumentException("Invalid role: " + request.getRole());
-        }
+        validateEmail(request.getEmail());
 
         User user = User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(role)
-                .status(status)
+                .role(Role.JOB_SEEKER)
+                .status(UserStatus.ACTIVE)
+                .locked(false)
                 .isActive(true)
                 .build();
 
         return userRepository.save(user);
     }
 
+    // ================= REGISTER RECRUITER =================
+    public User registerRecruiter(RegisterRequest request) {
 
+        validateEmail(request.getEmail());
+
+        User user = User.builder()
+                .name(request.getName())
+                .email(request.getEmail())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(Role.RECRUITER)
+                .status(UserStatus.PENDING_APPROVAL) // Needs approval
+                .locked(false)
+                .isActive(true)
+                .build();
+
+        return userRepository.save(user);
+    }
+
+ // ================= LOGIN =================
     public String login(String email, String password) {
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+        try {
 
-        // 🚫 CHECK STATUS BEFORE AUTH
-        if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new RuntimeException("User is blocked");
+            authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(email, password)
+            );
+
+        } catch (LockedException e) {
+            throw new AccountLockedException("Your account is locked. Contact administrator.");
+        } catch (DisabledException e) {
+            throw new AccountDisabledException("Your account is not active.");
+        } catch (BadCredentialsException e) {
+            throw new BadCredentialsException("Invalid email or password");
         }
 
-        authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(email, password)
-        );
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new BadCredentialsException("Invalid email or password")
+                );
 
         return jwtUtil.generateToken(
                 user.getId(),
@@ -89,4 +94,10 @@ public class AuthService {
         );
     }
 
+    // ================= HELPER METHOD =================
+    private void validateEmail(String email) {
+        if (userRepository.existsByEmail(email)) {
+            throw new UserAlreadyExistsException("Email already registered");
+        }
+    }
 }

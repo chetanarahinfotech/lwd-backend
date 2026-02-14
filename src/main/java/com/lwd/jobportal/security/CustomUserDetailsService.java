@@ -24,22 +24,33 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {	
+            throws UsernameNotFoundException {
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() ->
                         new UsernameNotFoundException("User not found with email: " + email));
 
-        // 🔴 BLOCK LOGIN IF USER IS BLOCKED
-        if (user.getStatus() == UserStatus.BLOCKED) {
-            throw new DisabledException("User account is blocked");
+        // ❌ Not approved
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new DisabledException("Account is not active yet");
         }
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),                     // ✅ email as username
-                user.getPassword(),
-                List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()))
-        );
+
+        // ❌ Locked by admin
+        if (user.isLocked()) {
+            throw new org.springframework.security.authentication.LockedException(
+                    "Account is locked by administrator"
+            );
+        }
+
+        return org.springframework.security.core.userdetails.User.builder()
+                .username(user.getEmail())
+                .password(user.getPassword())
+                .authorities("ROLE_" + user.getRole().name())
+                .accountLocked(user.isLocked())
+                .disabled(user.getStatus() != UserStatus.ACTIVE)
+                .build();
     }
+
 
 
 }

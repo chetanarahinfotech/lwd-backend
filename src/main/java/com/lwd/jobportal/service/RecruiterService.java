@@ -8,6 +8,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lwd.jobportal.dto.jobapplicationdto.JobApplicationResponse;
+import com.lwd.jobportal.dto.jobapplicationdto.PagedApplicationsResponse;
+import com.lwd.jobportal.dto.jobdto.JobSummaryDTO;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.JobApplication;
@@ -15,9 +18,6 @@ import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
-import com.lwd.jobportal.jobapplicationdto.JobApplicationResponse;
-import com.lwd.jobportal.jobapplicationdto.PagedApplicationsResponse;
-import com.lwd.jobportal.jobdto.JobSummaryDTO;
 import com.lwd.jobportal.repository.CompanyRepository;
 import com.lwd.jobportal.repository.JobApplicationRepository;
 import com.lwd.jobportal.repository.JobRepository;
@@ -68,7 +68,7 @@ public class RecruiterService {
         }
 
         recruiter.setCompany(company);
-        recruiter.setStatus(UserStatus.PENDING);
+        recruiter.setStatus(UserStatus.PENDING_APPROVAL);
 
         userRepository.save(recruiter);
     }

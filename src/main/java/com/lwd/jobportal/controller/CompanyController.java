@@ -9,8 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.lwd.jobportal.companydto.CompanyResponse;
-import com.lwd.jobportal.companydto.CreateCompanyRequest;
+import com.lwd.jobportal.dto.companydto.CompanyResponse;
+import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.CompanyService;
 
@@ -35,23 +35,6 @@ public class CompanyController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    // ✅ GET COMPANY BY ID (Public / Authenticated)
-    @GetMapping("/{id}")
-    public ResponseEntity<CompanyResponse> getCompany(
-            @PathVariable Long id) {
-
-        return ResponseEntity.ok(
-                companyService.getCompanyById(id)
-        );
-    }
-    
-    @GetMapping
-    public ResponseEntity<List<CompanyResponse>> getAllCompany() {
-
-        return ResponseEntity.ok(
-                companyService.getAllCompany()
-        );
-    }
     
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
     @GetMapping("/my-company")
@@ -96,6 +79,34 @@ public class CompanyController {
         companyService.deleteCompany(id);
 
         return ResponseEntity.noContent().build();
+    }
+    
+    
+    // ✅ GET COMPANY BY ID (Public / Authenticated)
+    @GetMapping("/{id}")
+    public ResponseEntity<CompanyResponse> getCompany(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                companyService.getCompanyById(id)
+        );
+    }
+    
+    // ✅ GET COMPANY BY ID (Public / Authenticated)
+    @GetMapping("/industry")
+    public ResponseEntity<List<CompanyResponse>> getCompanyByIndustry() {
+
+        return ResponseEntity.ok(
+                companyService.getCompanyByIndustry()
+        );
+    }
+    
+    @GetMapping
+    public ResponseEntity<List<CompanyResponse>> getAllCompany() {
+
+        return ResponseEntity.ok(
+                companyService.getAllCompany()
+        );
     }
     
 }

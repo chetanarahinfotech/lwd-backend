@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.lwd.jobportal.dto.admin.CompanyAdminDTO;
 import com.lwd.jobportal.dto.admin.JobAdminDTO;
 import com.lwd.jobportal.dto.admin.UserAdminDTO;
-import com.lwd.jobportal.recruiteradmindto.RecruiterResponse;
+import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.service.AdminService;
 
 import lombok.RequiredArgsConstructor;

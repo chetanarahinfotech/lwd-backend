@@ -4,10 +4,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.lwd.jobportal.dto.userdto.UpdateUserRequest;
+import com.lwd.jobportal.dto.userdto.UserResponse;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.UserService;
-import com.lwd.jobportal.userdto.UpdateUserRequest;
-import com.lwd.jobportal.userdto.UserResponse;
 
 import lombok.RequiredArgsConstructor;
 

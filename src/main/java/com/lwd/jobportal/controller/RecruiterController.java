@@ -6,8 +6,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.lwd.jobportal.jobdto.JobSummaryDTO;
-import com.lwd.jobportal.jobapplicationdto.PagedApplicationsResponse;
+import com.lwd.jobportal.dto.jobapplicationdto.PagedApplicationsResponse;
+import com.lwd.jobportal.dto.jobdto.JobSummaryDTO;
 import com.lwd.jobportal.service.RecruiterService;
 
 import lombok.RequiredArgsConstructor;

@@ -3,11 +3,11 @@ package com.lwd.jobportal.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lwd.jobportal.dto.userdto.UpdateUserRequest;
+import com.lwd.jobportal.dto.userdto.UserResponse;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.UserRepository;
-import com.lwd.jobportal.userdto.UpdateUserRequest;
-import com.lwd.jobportal.userdto.UserResponse;
 
 import lombok.RequiredArgsConstructor;
 
@@ -54,6 +54,7 @@ public class UserService {
                 .phone(user.getPhone())
                 .isActive(user.getIsActive())
                 .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
                 .companyName(user.getCompany() != null ? user.getCompany().getCompanyName() : "")
                 .build();
     }

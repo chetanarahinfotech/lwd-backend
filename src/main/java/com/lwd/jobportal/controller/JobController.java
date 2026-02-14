@@ -12,11 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.lwd.jobportal.dto.jobdto.CreateJobRequest;
+import com.lwd.jobportal.dto.jobdto.JobResponse;
+import com.lwd.jobportal.dto.jobdto.PagedJobResponse;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
-import com.lwd.jobportal.jobdto.CreateJobRequest;
-import com.lwd.jobportal.jobdto.JobResponse;
-import com.lwd.jobportal.jobdto.PagedJobResponse;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.JobService;
 

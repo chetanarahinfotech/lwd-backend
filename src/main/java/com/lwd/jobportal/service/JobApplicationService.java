@@ -9,15 +9,15 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.lwd.jobportal.companydto.CompanySummaryDTO;
+import com.lwd.jobportal.dto.companydto.CompanySummaryDTO;
+import com.lwd.jobportal.dto.jobapplicationdto.*;
+import com.lwd.jobportal.dto.jobdto.JobSummaryDTO;
 import com.lwd.jobportal.entity.*;
 import com.lwd.jobportal.enums.*;
 import com.lwd.jobportal.exception.BadRequestException;
 import com.lwd.jobportal.exception.ForbiddenActionException;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.exception.UnauthorizedException;
-import com.lwd.jobportal.jobapplicationdto.*;
-import com.lwd.jobportal.jobdto.JobSummaryDTO;
 import com.lwd.jobportal.repository.*;
 
 import lombok.RequiredArgsConstructor;

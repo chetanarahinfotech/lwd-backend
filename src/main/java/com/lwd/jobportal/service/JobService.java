@@ -10,14 +10,14 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.lwd.jobportal.companydto.CompanySummaryDTO;
+import com.lwd.jobportal.dto.companydto.CompanySummaryDTO;
+import com.lwd.jobportal.dto.jobdto.*;
 import com.lwd.jobportal.entity.*;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
-import com.lwd.jobportal.jobdto.*;
 import com.lwd.jobportal.repository.*;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.specification.IndustryCount;

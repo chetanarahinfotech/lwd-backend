@@ -34,13 +34,15 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/**").permitAll()
+                    .requestMatchers("/api/auth/register/**", "/api/auth/login/**").permitAll()
+                    .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN")
                     .requestMatchers("/api/users/**").authenticated()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
 //                    .requestMatchers("/api/companies/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
                     .requestMatchers("/api/companies/**").permitAll()
                     .requestMatchers("/api/recruiter-admin/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
                     .requestMatchers("/api/jobs/**").permitAll()
+                    .requestMatchers("/api/job-seekers/**").permitAll()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

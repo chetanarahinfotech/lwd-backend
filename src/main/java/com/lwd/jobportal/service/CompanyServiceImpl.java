@@ -6,8 +6,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.lwd.jobportal.companydto.CompanyResponse;
-import com.lwd.jobportal.companydto.CreateCompanyRequest;
+import com.lwd.jobportal.dto.companydto.CompanyResponse;
+import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
@@ -56,26 +56,6 @@ public class CompanyServiceImpl implements CompanyService {
 
         return mapToResponse(companyRepository.save(company));
     }
-
-
-    @Override
-    public CompanyResponse getCompanyById(Long companyId) {
-
-        Company company = companyRepository.findById(companyId)
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
-
-        return mapToResponse(company);
-    }
-    
-    @Override
-    public List<CompanyResponse> getAllCompany() {
-        List<Company> companies = companyRepository.findAll();
-        return companies.stream()
-                .map(this::mapToResponse) // map each Company to CompanyResponse
-                .toList();
-    }
-
-    
 
 
 	@Override
@@ -200,6 +180,34 @@ public class CompanyServiceImpl implements CompanyService {
         );
     }
     
+    
+    @Override
+    public CompanyResponse getCompanyById(Long companyId) {
+
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+
+        return mapToResponse(company);
+    }
+    
+    @Override
+    public List<CompanyResponse> getAllCompany() {
+        List<Company> companies = companyRepository.findAll();
+        return companies.stream()
+                .map(this::mapToResponse) // map each Company to CompanyResponse
+                .toList();
+    }
+    
+    @Override
+	public List<CompanyResponse> getCompanyByIndustry() {
+    	 List<Company> companies = companyRepository.findAll();
+         return companies.stream()
+                 .map(this::mapToResponse) // map each Company to CompanyResponse
+                 .toList();
+	}
+
+    
+    
 
 
     private CompanyResponse mapToResponse(Company company) {
@@ -216,5 +224,6 @@ public class CompanyServiceImpl implements CompanyService {
                 .updatedAt(company.getUpdatedAt())
                 .build();
     }
+
 
 }

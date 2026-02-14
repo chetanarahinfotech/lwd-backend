@@ -48,6 +48,9 @@ public class User {
     @Column(nullable = false)
     private Boolean isActive = true;
     
+    @Column(nullable = false)
+    private boolean locked = false;
+    
     @ManyToOne
     @JoinColumn(name = "company_id")
     private Company company;

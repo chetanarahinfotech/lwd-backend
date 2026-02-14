@@ -8,9 +8,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.lwd.jobportal.dto.jobapplicationdto.*;
 import com.lwd.jobportal.enums.ApplicationStatus;
 import com.lwd.jobportal.enums.Role;
-import com.lwd.jobportal.jobapplicationdto.*;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.JobApplicationService;
 

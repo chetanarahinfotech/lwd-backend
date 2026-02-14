@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.dto.admin.CompanyAdminDTO;
 import com.lwd.jobportal.dto.admin.JobAdminDTO;
 import com.lwd.jobportal.dto.admin.UserAdminDTO;
+import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.User;
@@ -17,7 +18,6 @@ import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.exception.ForbiddenActionException;
 import com.lwd.jobportal.exception.InvalidOperationException;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
-import com.lwd.jobportal.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.repository.CompanyRepository;
 import com.lwd.jobportal.repository.JobRepository;
 import com.lwd.jobportal.repository.UserRepository;
@@ -52,11 +52,11 @@ public class AdminService {
         Long adminId = SecurityUtils.getUserId();
         User user = getUser(targetUserId);
 
-        if (user.getStatus() == UserStatus.BLOCKED) {
+        if (user.getStatus() == UserStatus.SUSPENDED) {
             throw new InvalidOperationException("User is already blocked");
         }
 
-        user.setStatus(UserStatus.BLOCKED);
+        user.setStatus(UserStatus.SUSPENDED);
         user.setIsActive(false);
         user.setUpdatedAt(LocalDateTime.now());
 
