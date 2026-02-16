@@ -1,9 +1,10 @@
 package com.lwd.jobportal.service;
 
-import java.util.List;
+import org.springframework.data.domain.Pageable;
 
 import com.lwd.jobportal.dto.companydto.CompanyResponse;
 import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
+import com.lwd.jobportal.dto.companydto.PagedCompanyResponse;
 
 public interface CompanyService {
 
@@ -14,12 +15,13 @@ public interface CompanyService {
     CompanyResponse updateCompany(Long companyId, CreateCompanyRequest request);
 
     void deleteCompany(Long companyId);
-    
+
     CompanyResponse getMyCompanyBy(Long userId);
-    
+
     CompanyResponse getCompanyByCreatedBy(Long userId);
 
-    List<CompanyResponse> getAllCompany();
+    PagedCompanyResponse getAllCompany(Pageable pageable);
 
-    List<CompanyResponse> getCompanyByIndustry();
+    // ✅ Updated with Pageable + industry parameter
+    PagedCompanyResponse getCompanyByIndustry(String industry, Pageable pageable);
 }

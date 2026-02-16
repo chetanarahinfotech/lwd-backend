@@ -39,6 +39,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.JOB_SEEKER)
+                .phone(request.getPhone())
                 .status(UserStatus.ACTIVE)
                 .locked(false)
                 .isActive(true)
@@ -57,6 +58,7 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.RECRUITER)
+                .phone(request.getPhone())
                 .status(UserStatus.PENDING_APPROVAL) // Needs approval
                 .locked(false)
                 .isActive(true)

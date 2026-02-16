@@ -39,6 +39,7 @@ public class Company {
     private String website;
     private String location;
     private String logoUrl;
+    private String industry;
 
     @Column(nullable = false)
     private Boolean isActive = true;

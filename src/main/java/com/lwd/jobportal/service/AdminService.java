@@ -3,10 +3,15 @@ package com.lwd.jobportal.service;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import com.lwd.jobportal.dto.admin.CompanyAdminDTO;
 import com.lwd.jobportal.dto.admin.JobAdminDTO;
+import com.lwd.jobportal.dto.admin.PagedResponse;
 import com.lwd.jobportal.dto.admin.UserAdminDTO;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.entity.Company;
@@ -36,12 +41,25 @@ public class AdminService {
 
     // ================= USERS =================
     
-    public List<UserAdminDTO> getAllUsers() {
+    public PagedResponse<UserAdminDTO> getAllUsers(int page, int size) {
         validateAdminAccess();
-        return userRepository.findAll()
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        Page<User> userPage = userRepository.findAll(pageable);
+
+        List<UserAdminDTO> content = userPage.getContent()
                 .stream()
                 .map(this::toUserAdminDTO)
                 .toList();
+
+        return new PagedResponse<>(
+                content,
+                userPage.getNumber(),
+                userPage.getSize(),
+                userPage.getTotalElements(),
+                userPage.getTotalPages(),
+                userPage.isLast()
+        );
     }
 
 
@@ -81,17 +99,21 @@ public class AdminService {
         logAction(adminId, "UNBLOCK_USER", targetUserId);
     }
     
-    public List<RecruiterResponse> getRecruitersByCompanyId(Long companyId) {
+    public PagedResponse<RecruiterResponse> getRecruitersByCompanyId(
+            Long companyId, int page, int size) {
 
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() ->
                         new ResourceNotFoundException("Company not found with id: " + companyId)
                 );
 
-        List<User> recruiters =
-                userRepository.findByRoleAndCompany(Role.RECRUITER, company);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
 
-        return recruiters.stream()
+        Page<User> recruiterPage =
+                userRepository.findByRoleAndCompany(Role.RECRUITER, company, pageable);
+
+        List<RecruiterResponse> content = recruiterPage.getContent()
+                .stream()
                 .map(user -> RecruiterResponse.builder()
                         .id(user.getId())
                         .name(user.getName())
@@ -101,22 +123,32 @@ public class AdminService {
                         .createdAt(user.getCreatedAt())
                         .build())
                 .toList();
+
+        return new PagedResponse<>(
+                content,
+                recruiterPage.getNumber(),
+                recruiterPage.getSize(),
+                recruiterPage.getTotalElements(),
+                recruiterPage.getTotalPages(),
+                recruiterPage.isLast()
+        );
     }
 
     // ================= COMPANIES =================
 
-    public List<CompanyAdminDTO> getAllCompanies() {
+    public PagedResponse<CompanyAdminDTO> getAllCompanies(int page, int size) {
 
-        return companyRepository.findAll()
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        Page<Company> companyPage = companyRepository.findAll(pageable);
+
+        List<CompanyAdminDTO> content = companyPage.getContent()
                 .stream()
                 .map(company -> {
 
-                    // Creator
                     User creator = userRepository
                             .findById(company.getCreatedById())
                             .orElse(null);
 
-                    // Stats
                     long recruiterCount =
                             userRepository.countByCompanyIdAndRole(
                                     company.getId(), Role.RECRUITER
@@ -129,18 +161,26 @@ public class AdminService {
                             .id(company.getId())
                             .companyName(company.getCompanyName())
                             .isActive(company.getIsActive())
-
                             .createdById(company.getCreatedById())
                             .createdByName(
                                     creator != null ? creator.getName() : "N/A"
                             )
-
                             .totalRecruiters(recruiterCount)
                             .totalJobs(jobCount)
                             .build();
                 })
                 .toList();
+
+        return new PagedResponse<>(
+                content,
+                companyPage.getNumber(),
+                companyPage.getSize(),
+                companyPage.getTotalElements(),
+                companyPage.getTotalPages(),
+                companyPage.isLast()
+        );
     }
+
 
     
     public void blockCompany(Long companyId) {
@@ -168,16 +208,14 @@ public class AdminService {
 
     // ================= JOBS =================
     
-    
-    public List<JobAdminDTO> getAllJobs() {
-        Role role = SecurityUtils.getRole();
+    public PagedResponse<JobAdminDTO> getAllJobs(int page, int size) {
 
-        if (role != Role.ADMIN) {
-            throw new ForbiddenActionException("Only ADMIN can perform this action");
-        }
+        validateAdminAccess();
 
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+        Page<Job> jobPage = jobRepository.findAll(pageable);
 
-        return jobRepository.findAll()
+        List<JobAdminDTO> content = jobPage.getContent()
                 .stream()
                 .map(job -> JobAdminDTO.builder()
                         .id(job.getId())
@@ -186,6 +224,15 @@ public class AdminService {
                         .status(job.getStatus())
                         .build())
                 .toList();
+
+        return new PagedResponse<>(
+                content,
+                jobPage.getNumber(),
+                jobPage.getSize(),
+                jobPage.getTotalElements(),
+                jobPage.getTotalPages(),
+                jobPage.isLast()
+        );
     }
 
 

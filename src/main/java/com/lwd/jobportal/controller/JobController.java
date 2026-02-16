@@ -129,7 +129,7 @@ public class JobController {
     @GetMapping("/company/{companyId}")
     public ResponseEntity<PagedJobResponse> getJobsByCompany(
             @PathVariable Long companyId,
-            @RequestParam(defaultValue = "0") int page
+            @RequestParam(defaultValue = "12") int page
     ) {
         return ResponseEntity.ok(
                 jobService.getJobsByCompany(companyId, page)
@@ -142,7 +142,7 @@ public class JobController {
     @GetMapping
     public ResponseEntity<PagedJobResponse> getAllJobs(
     		@RequestParam(defaultValue = "0") int page,
-    	    @RequestParam(defaultValue = "6") int size
+    	    @RequestParam(defaultValue = "12") int size
     ) {
         return ResponseEntity.ok(
                 jobService.getAllJobs(page)
@@ -154,7 +154,7 @@ public class JobController {
     // ==================================================
     @GetMapping("/top-categories")
     public ResponseEntity<List<String>> getTopCategories(
-            @RequestParam(defaultValue = "6") int limit
+            @RequestParam(defaultValue = "12") int limit
     ) {
         return ResponseEntity.ok(
                 jobService.getTopIndustries(limit)
@@ -169,7 +169,7 @@ public class JobController {
     public ResponseEntity<PagedJobResponse> getJobsByIndustry(
             @RequestParam String industry,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "12") int size
     ) {
         return ResponseEntity.ok(jobService.getJobsByIndustry(industry, page, size));
     }
@@ -184,7 +184,7 @@ public class JobController {
             LocalDateTime lastSeen,
 
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "12") int size
     ) {
         return ResponseEntity.ok(
                 jobService.getLatestJobs(lastSeen, page, size)

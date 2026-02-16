@@ -2,8 +2,7 @@ package com.lwd.jobportal.controller;
 
 import jakarta.validation.Valid;
 
-import java.util.List;
-
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.lwd.jobportal.dto.companydto.CompanyResponse;
 import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
+import com.lwd.jobportal.dto.companydto.PagedCompanyResponse;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.CompanyService;
 
@@ -92,21 +92,27 @@ public class CompanyController {
         );
     }
     
-    // ✅ GET COMPANY BY ID (Public / Authenticated)
-    @GetMapping("/industry")
-    public ResponseEntity<List<CompanyResponse>> getCompanyByIndustry() {
+    // ✅ GET ALL COMPANIES (PAGINATED)
+    @GetMapping
+    public ResponseEntity<PagedCompanyResponse> getAllCompanies(
+            Pageable pageable) {
 
         return ResponseEntity.ok(
-                companyService.getCompanyByIndustry()
+                companyService.getAllCompany(pageable)
         );
     }
     
-    @GetMapping
-    public ResponseEntity<List<CompanyResponse>> getAllCompany() {
+    // ✅ GET BY INDUSTRY (PAGINATED)
+    @GetMapping("/industry")
+    public ResponseEntity<PagedCompanyResponse> getCompanyByIndustry(
+            @RequestParam String industry,
+            Pageable pageable) {
 
         return ResponseEntity.ok(
-                companyService.getAllCompany()
+                companyService.getCompanyByIndustry(industry, pageable)
         );
     }
+    
+   
     
 }

@@ -3,11 +3,14 @@ package com.lwd.jobportal.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lwd.jobportal.dto.companydto.CompanyResponse;
 import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
+import com.lwd.jobportal.dto.companydto.PagedCompanyResponse;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
@@ -191,20 +194,47 @@ public class CompanyServiceImpl implements CompanyService {
     }
     
     @Override
-    public List<CompanyResponse> getAllCompany() {
-        List<Company> companies = companyRepository.findAll();
-        return companies.stream()
-                .map(this::mapToResponse) // map each Company to CompanyResponse
+    public PagedCompanyResponse getAllCompany(Pageable pageable) {
+
+        Page<Company> companyPage = companyRepository.findAll(pageable);
+
+        List<CompanyResponse> content = companyPage.getContent()
+                .stream()
+                .map(this::mapToResponse)
                 .toList();
+
+        return new PagedCompanyResponse(
+                content,
+                companyPage.getNumber(),
+                companyPage.getSize(),
+                companyPage.getTotalElements(),
+                companyPage.getTotalPages(),
+                companyPage.isLast()
+        );
     }
+
     
     @Override
-	public List<CompanyResponse> getCompanyByIndustry() {
-    	 List<Company> companies = companyRepository.findAll();
-         return companies.stream()
-                 .map(this::mapToResponse) // map each Company to CompanyResponse
-                 .toList();
-	}
+    public PagedCompanyResponse getCompanyByIndustry(String industry, Pageable pageable) {
+
+        Page<Company> companyPage =
+                companyRepository.findByIndustry(industry, pageable);
+
+        List<CompanyResponse> content = companyPage.getContent()
+                .stream()
+                .map(this::mapToResponse)
+                .toList();
+
+        return new PagedCompanyResponse(
+                content,
+                companyPage.getNumber(),
+                companyPage.getSize(),
+                companyPage.getTotalElements(),
+                companyPage.getTotalPages(),
+                companyPage.isLast()
+        );
+    }
+
 
     
     

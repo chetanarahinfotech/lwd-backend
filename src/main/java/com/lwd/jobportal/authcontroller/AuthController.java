@@ -72,6 +72,7 @@ public class AuthController {
                 user.getName(),
                 user.getEmail(),
                 user.getRole(),
+                user.getPhone(),
                 user.getStatus(),
                 user.getIsActive(),
                 user.getCreatedAt()

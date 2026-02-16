@@ -157,7 +157,7 @@ public class JobService {
 
         Pageable pageable = PageRequest.of(
                 page,
-                10,
+                12,
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
@@ -211,7 +211,7 @@ public class JobService {
 
         Pageable pageable = PageRequest.of(
                 page,
-                10,
+                12,
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
@@ -227,7 +227,7 @@ public class JobService {
 
         Pageable pageable = PageRequest.of(
                 page,
-                10,
+                12,
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 

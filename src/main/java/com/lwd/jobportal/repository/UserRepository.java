@@ -3,6 +3,8 @@ package com.lwd.jobportal.repository;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -26,12 +28,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Find active users
     List<User> findByIsActiveTrue();
 
-	List<User> findByRoleAndCompany(Role role, Company company);
+	Page<User> findByRoleAndCompany(Role role, Company company, Pageable pageable);
 	
-	List<User> findByRoleAndCompanyIdAndStatus(
+	Page<User> findByRoleAndCompanyIdAndStatus(
 	        Role role,
 	        Long companyId,
-	        UserStatus status
+	        UserStatus status,
+	        Pageable pageable
 	);
 	
 	 long countByCompanyIdAndRole(Long companyId, Role role);

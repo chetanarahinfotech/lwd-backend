@@ -16,6 +16,7 @@ public class RegisterResponse {
     private String name;
     private String email;
     private Role role;
+    private String phone;
     private UserStatus status;
     private Boolean isActive;
     private LocalDateTime createdAt;

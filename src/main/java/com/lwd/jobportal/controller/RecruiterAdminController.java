@@ -1,11 +1,10 @@
 package com.lwd.jobportal.controller;
 
-import java.util.List;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.lwd.jobportal.dto.admin.PagedResponse;
 import com.lwd.jobportal.dto.jobdto.JobResponse;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.security.SecurityUtils;
@@ -20,27 +19,30 @@ public class RecruiterAdminController {
 
     private final RecruiterAdminService recruiterAdminService;
 
-    // ================= LIST ALL RECRUITERS =================
-    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @GetMapping("/recruiters")
-    public ResponseEntity<List<RecruiterResponse>> getRecruiters(){
-        // The principal is the logged-in user's ID
+    public ResponseEntity<PagedResponse<RecruiterResponse>> getCompanyRecruiters(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
         Long recruiterAdminId = SecurityUtils.getUserId();
-        
-        List<RecruiterResponse> recruiters = recruiterAdminService.getCompanyRecruiters(recruiterAdminId);
-        
-        return ResponseEntity.ok(recruiters);
+        return ResponseEntity.ok(
+                recruiterAdminService.getCompanyRecruiters(recruiterAdminId, page, size)
+        );
     }
+
     
     
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @GetMapping("/recruiters/pending")
-    public ResponseEntity<List<RecruiterResponse>> getPendingRecruiters() {
+    public ResponseEntity<PagedResponse<RecruiterResponse>> getPendingRecruiters(
+    		@RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    		) {
 
         Long adminId = SecurityUtils.getUserId();
 
         return ResponseEntity.ok(
-                recruiterAdminService.getPendingRecruiters(adminId)
+                recruiterAdminService.getPendingRecruiters(adminId, page, size)
         );
     }
 
@@ -78,11 +80,14 @@ public class RecruiterAdminController {
     
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @GetMapping("/recruiter/{recruiterId}/jobs")
-    public ResponseEntity<List<JobResponse>> getJobsByRecruiter(
-            @PathVariable Long recruiterId
+    public ResponseEntity<PagedResponse<JobResponse>> getJobsByRecruiter(
+            @PathVariable Long recruiterId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(
-                recruiterAdminService.getJobsByRecruiter(recruiterId)
+                recruiterAdminService.getJobsByRecruiter(recruiterId, page, size)
         );
     }
+
 }

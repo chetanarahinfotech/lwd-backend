@@ -2,9 +2,14 @@ package com.lwd.jobportal.service;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lwd.jobportal.dto.admin.PagedResponse;
 import com.lwd.jobportal.dto.companydto.CompanySummaryDTO;
 import com.lwd.jobportal.dto.jobdto.JobResponse;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
@@ -30,13 +35,24 @@ public class RecruiterAdminService {
     private final JobRepository jobRepository;
 
     @Transactional(readOnly = true)
-    public List<RecruiterResponse> getCompanyRecruiters(Long recruiterAdminId) {
+    public PagedResponse<RecruiterResponse> getCompanyRecruiters(
+            Long recruiterAdminId,
+            int page,
+            int size
+    ) {
+
         Company company = companyRepository.findByCreatedById(recruiterAdminId)
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found for this admin"));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Company not found for this admin")
+                );
 
-        List<User> recruiters = userRepository.findByRoleAndCompany(Role.RECRUITER, company);
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
 
-        return recruiters.stream()
+        Page<User> recruiterPage =
+                userRepository.findByRoleAndCompany(Role.RECRUITER, company, pageable);
+
+        List<RecruiterResponse> content = recruiterPage.getContent()
+                .stream()
                 .map(user -> RecruiterResponse.builder()
                         .id(user.getId())
                         .name(user.getName())
@@ -46,26 +62,53 @@ public class RecruiterAdminService {
                         .createdAt(user.getCreatedAt())
                         .build())
                 .toList();
+
+        return new PagedResponse<>(
+                content,
+                recruiterPage.getNumber(),
+                recruiterPage.getSize(),
+                recruiterPage.getTotalElements(),
+                recruiterPage.getTotalPages(),
+                recruiterPage.isLast()
+        );
     }
+
 
 
     
     @Transactional(readOnly = true)
-    public List<RecruiterResponse> getPendingRecruiters(Long recruiterAdminId) {
+    public PagedResponse<RecruiterResponse> getPendingRecruiters(
+            Long recruiterAdminId,
+            int page,
+            int size
+    ) {
 
         Company company = companyRepository.findByCreatedById(recruiterAdminId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
 
-        List<User> recruiters = userRepository
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<User> recruiterPage = userRepository
                 .findByRoleAndCompanyIdAndStatus(
                         Role.RECRUITER,
                         company.getId(),
-                        UserStatus.PENDING_APPROVAL
+                        UserStatus.PENDING_APPROVAL,
+                        pageable
                 );
 
-        return recruiters.stream()
+        List<RecruiterResponse> content = recruiterPage.getContent()
+                .stream()
                 .map(this::mapToResponse)
                 .toList();
+
+        return new PagedResponse<>(
+                content,
+                recruiterPage.getNumber(),
+                recruiterPage.getSize(),
+                recruiterPage.getTotalElements(),
+                recruiterPage.getTotalPages(),
+                recruiterPage.isLast()
+        );
     }
 
 
@@ -114,11 +157,12 @@ public class RecruiterAdminService {
         return mapToResponse(recruiter);
     }
     
-    
- // ==================================================
-    // ADMIN / RECRUITER_ADMIN → JOBS BY RECRUITER
-    // ==================================================
-    public List<JobResponse> getJobsByRecruiter(Long recruiterId) {
+
+    public PagedResponse<JobResponse> getJobsByRecruiter(
+            Long recruiterId,
+            int page,
+            int size
+    ) {
 
         User recruiter = userRepository.findById(recruiterId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recruiter not found"));
@@ -127,10 +171,24 @@ public class RecruiterAdminService {
             throw new IllegalArgumentException("User is not a recruiter");
         }
 
-        return jobRepository.findByCreatedById(recruiterId)
+        Pageable pageable = PageRequest.of(page, size);
+
+        Page<Job> jobPage = jobRepository
+                .findByCreatedById(recruiterId, pageable);
+
+        List<JobResponse> content = jobPage.getContent()
                 .stream()
                 .map(this::mapToJobResponse)
                 .toList();
+
+        return new PagedResponse<>(
+                content,
+                jobPage.getNumber(),
+                jobPage.getSize(),
+                jobPage.getTotalElements(),
+                jobPage.getTotalPages(),
+                jobPage.isLast()
+        );
     }
 
 
