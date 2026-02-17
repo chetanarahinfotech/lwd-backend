@@ -2,6 +2,7 @@ package com.lwd.jobportal.repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,7 +15,6 @@ import org.springframework.stereotype.Repository;
 
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.enums.JobStatus;
-import com.lwd.jobportal.enums.JobType;
 import com.lwd.jobportal.specification.IndustryCount;
 
 @Repository
@@ -27,6 +27,14 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     Page<Job> findByCreatedById(Long userId, Pageable pageable);
     
     long countByCompanyId(Long companyId);
+    
+    @EntityGraph(attributePaths = {
+            "company",
+            "createdBy",
+            "createdBy.company"
+    })
+    Optional<Job> findByIdAndDeletedFalse(Long id);
+
     
     List<Job> findByStatusAndCreatedAtLessThanOrderByCreatedAtDesc(
             JobStatus status,
@@ -92,16 +100,19 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     
     @Query("""
     	    SELECT j FROM Job j
+    	    JOIN FETCH j.createdBy u
+    	    JOIN FETCH u.company
     	    WHERE j.status = 'OPEN'
     	    AND j.industry = :industry
     	    AND j.jobType = :jobType
     	    AND j.id <> :jobId
     	""")
-    	List<Job> findSimilarJobs(
-    	        @Param("industry") String industry,
-    	        @Param("jobType") JobType jobType,
-    	        @Param("jobId") Long jobId
+    	List<Job> findSimilarJobsWithUserAndCompany(
+    	    String industry,
+    	    String jobType,
+    	    Long jobId
     	);
+
 
     @Query("""
     	    SELECT DISTINCT j.title

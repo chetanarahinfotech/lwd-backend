@@ -22,6 +22,12 @@ public class JobResponse {
     private Integer maxExperience;
     private String jobType;
     private LocalDateTime createdAt;
+    
+    private String noticePreference;
+    private Integer maxNoticePeriod;
+    private Boolean lwdPreferred;
+
+    
     private CompanySummaryDTO company;
     
 }
