@@ -3,10 +3,8 @@ package com.lwd.jobportal.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,6 +15,7 @@ import com.lwd.jobportal.dto.jobdto.JobResponse;
 import com.lwd.jobportal.dto.jobdto.PagedJobResponse;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
+import com.lwd.jobportal.enums.NoticeStatus;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.JobService;
 
@@ -78,9 +77,7 @@ public class JobController {
     // DELETE JOB
     // ==================================================
     @DeleteMapping("/{jobId}")
-    public ResponseEntity<Void> deleteJob(
-            @PathVariable Long jobId
-    ) {
+    public ResponseEntity<Void> deleteJob( @PathVariable Long jobId ) {
         Long userId = SecurityUtils.getUserId();
         jobService.deleteJob(jobId, userId);
         return ResponseEntity.noContent().build();
@@ -136,18 +133,19 @@ public class JobController {
         );
     }
 
-    // ==================================================
-    // GET ALL JOBS (PUBLIC)
-    // ==================================================
-    @GetMapping
-    public ResponseEntity<PagedJobResponse> getAllJobs(
-    		@RequestParam(defaultValue = "0") int page,
-    	    @RequestParam(defaultValue = "12") int size
-    ) {
-        return ResponseEntity.ok(
-                jobService.getAllJobs(page)
-        );
-    }
+	 // ==================================================
+	 // GET ALL JOBS (PUBLIC)
+	 // ==================================================
+	 @GetMapping
+	 public ResponseEntity<PagedJobResponse> getAllJobs(
+	         @RequestParam(defaultValue = "0") int page,
+	         @RequestParam(defaultValue = "12") int size
+	 ) {
+	     return ResponseEntity.ok(
+	             jobService.getAllJobs(page, size)
+	     );
+	 }
+
     
     // ==================================================
     // GET INDUSTRY CATEGORIES
@@ -174,53 +172,44 @@ public class JobController {
         return ResponseEntity.ok(jobService.getJobsByIndustry(industry, page, size));
     }
 
-    // ==================================================
-    // GET LATEST JOBS (PUBLIC)
-    // ==================================================
-    @GetMapping("/latest")
-    public ResponseEntity<List<JobResponse>> getLatestJobs(
-            @RequestParam(required = false)
-            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-            LocalDateTime lastSeen,
-
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "12") int size
-    ) {
-        return ResponseEntity.ok(
-                jobService.getLatestJobs(lastSeen, page, size)
-        );
-    }
-    
 
 
-
-    // ==================================================
-    // SEARCH JOBS (PUBLIC)
-    // ==================================================
     @GetMapping("/search")
     public ResponseEntity<PagedJobResponse> searchJobs(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String location,
+            @RequestParam(required = false) String industry,
             @RequestParam(required = false) String companyName,
             @RequestParam(required = false) Integer minExp,
             @RequestParam(required = false) Integer maxExp,
             @RequestParam(required = false) JobType jobType,
+
+            // ===== LWD FILTERS =====
+            @RequestParam(required = false) NoticeStatus noticePreference,
+            @RequestParam(required = false) Integer maxNoticePeriod,
+            @RequestParam(required = false) Boolean lwdPreferred,
+
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
         return ResponseEntity.ok(
-                jobService.searchJobs(
+                jobService.searchPublicJobs(
                         keyword,
                         location,
+                        industry,
                         companyName,
                         minExp,
                         maxExp,
                         jobType,
+                        noticePreference,
+                        maxNoticePeriod,
+                        lwdPreferred,
                         page,
                         size
                 )
         );
     }
+
     
     @GetMapping("/suggestions")
     public ResponseEntity<List<String>> getSearchSuggestions(
@@ -231,40 +220,6 @@ public class JobController {
         );
     }
     
-    @GetMapping("/filter")
-    public ResponseEntity<PagedJobResponse> filterJobs(
-            @RequestParam(required = false) String location,
-            @RequestParam(required = false) JobType jobType,
-            @RequestParam(required = false) Integer minExp,
-            @RequestParam(required = false) Integer maxExp,
-            @RequestParam(required = false) JobStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        return ResponseEntity.ok(
-                jobService.filterJobs(
-                        location,
-                        jobType,
-                        minExp,
-                        maxExp,
-                        status,
-                        page,
-                        size
-                )
-        );
-    }
-
-    
-    @GetMapping("/quick-search")
-    public ResponseEntity<PagedJobResponse> quickSearch(
-            @RequestParam String q,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        return ResponseEntity.ok(
-                jobService.quickSearch(q, page, size)
-        );
-    }
     
     
     @GetMapping("/suggested")

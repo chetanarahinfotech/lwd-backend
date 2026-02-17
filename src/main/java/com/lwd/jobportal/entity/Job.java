@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
+import com.lwd.jobportal.enums.NoticeStatus;
 
 @Entity
 @Table(
@@ -14,19 +15,28 @@ import com.lwd.jobportal.enums.JobType;
 	    indexes = {
 
 	        // Latest jobs (pagination & feed)
-	        @Index(
-	            name = "idx_jobs_status_created_at",
-	            columnList = "status, created_at"
-	        ),
+	    	@Index(
+	    		    name = "idx_jobs_deleted_status_created_at",
+	   			    columnList = "deleted, status, created_at"
+	   			)
+,
 
 	        // AUTOCOMPLETE & SEARCH (single-column indexes)
 	        @Index(name = "idx_jobs_title", columnList = "title"),
 	        @Index(name = "idx_jobs_location", columnList = "location"),
 	        @Index(name = "idx_jobs_industry", columnList = "industry"),
+	        @Index(name = "idx_jobs_deleted", columnList = "deleted"),
+
 
 	        // Filters
 	        @Index(name = "idx_jobs_job_type", columnList = "job_type"),
-	        @Index(name = "idx_jobs_min_exp", columnList = "min_experience")
+	        @Index(name = "idx_jobs_min_exp", columnList = "min_experience"),
+	    	
+	        // LWD SPECIFIC 
+	    	@Index(name = "idx_jobs_notice_preference", columnList = "notice_preference"),
+	    	@Index(name = "idx_jobs_max_notice_period", columnList = "max_notice_period"),
+	    	@Index(name = "idx_jobs_lwd_preferred", columnList = "lwd_preferred")
+
 	    }
 	)
 
@@ -71,6 +81,21 @@ public class Job {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private JobStatus status;
+    
+ // ================= LWD SPECIFIC =================
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "notice_preference")
+    private NoticeStatus noticePreference;
+
+    @Column(name = "max_notice_period")
+    private Integer maxNoticePeriod; // in days
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Boolean lwdPreferred = false;
+
+
 
     // ================= RELATIONS =================
     @ManyToOne(fetch = FetchType.LAZY)
@@ -83,6 +108,10 @@ public class Job {
     
     @Column(nullable = false)
     private Long viewCount = 0L;
+    
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
+    private Boolean deleted = false;
+
 
 
     // ================= AUDIT =================
@@ -91,6 +120,9 @@ public class Job {
 
     @Column
     private LocalDateTime updatedAt;
+    
+    @Column
+    private LocalDateTime deletedAt;
 
     // ================= LIFECYCLE =================
     @PrePersist
@@ -106,11 +138,17 @@ public class Job {
         }
     }
     
-   
-
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
     }
+    
+    public void softDelete() {
+        this.deleted = true;
+        this.deletedAt = LocalDateTime.now();
+        this.status = JobStatus.CLOSED;
+    }
+
+
 }

@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.springframework.data.domain.*;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -15,6 +16,7 @@ import com.lwd.jobportal.dto.jobdto.*;
 import com.lwd.jobportal.entity.*;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
+import com.lwd.jobportal.enums.NoticeStatus;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
@@ -120,6 +122,7 @@ public class JobService {
     // DELETE JOB
     // ==================================================
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    @Transactional
     public void deleteJob(Long jobId, Long userId) {
 
         User user = getUserById(userId);
@@ -127,8 +130,14 @@ public class JobService {
 
         validateOwnership(user, job);
 
-        jobRepository.delete(job);
+        // 🔥 Soft delete
+        job.setDeleted(true);
+        job.setDeletedAt(LocalDateTime.now());
+        job.setStatus(JobStatus.CLOSED); // Optional but recommended
+
+        jobRepository.save(job);
     }
+
 
     // ==================================================
     // CHANGE JOB STATUS
@@ -223,33 +232,7 @@ public class JobService {
     }
     
 
-    public PagedJobResponse getAllJobs(int page) {
-
-        Pageable pageable = PageRequest.of(
-                page,
-                12,
-                Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        Page<JobResponse> jobPage = jobRepository
-                .findAll(pageable)
-                .map(this::mapToResponse);
-
-        return new PagedJobResponse(
-                jobPage.getContent(),
-                jobPage.getNumber(),
-                jobPage.getSize(),
-                jobPage.getTotalElements(),
-                jobPage.getTotalPages(),
-                jobPage.isLast()
-        );
-    }
-
-
-    // ==================================================
-    // LATEST JOBS (Cursor + Pagination)
-    // ==================================================
-    public List<JobResponse> getLatestJobs(LocalDateTime lastSeen, int page, int size) {
+    public PagedJobResponse getAllJobs(int page, int size) {
 
         Pageable pageable = PageRequest.of(
                 page,
@@ -257,24 +240,14 @@ public class JobService {
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
-        List<Job> jobs;
+        Page<Job> jobPage =
+                jobRepository.findAll(JobSpecification.publicJobs(), pageable);
 
-        if (lastSeen != null) {
-            jobs = jobRepository.findByStatusAndCreatedAtLessThanOrderByCreatedAtDesc(
-                    JobStatus.OPEN,
-                    lastSeen,
-                    pageable
-            );
-        } else {
-            jobs = jobRepository.findLatestJobsWithCompany(
-                    JobStatus.OPEN,
-                    pageable
-            );
-        }
-
-        return jobs.stream().map(this::mapToResponse).toList();
+        return toPagedResponse(jobPage.map(this::mapToResponse));
     }
-    
+
+
+
     
     public List<String> getTopIndustries(int limit) {
 
@@ -308,86 +281,54 @@ public class JobService {
                 );
     }
         
+	 // ==================================================
+	 // SEARCH PUBLIC JOBS
+	 // ==================================================
+	 public PagedJobResponse searchPublicJobs(
+	         String keyword,
+	         String location,
+	         String industry,
+	         String companyName,
+	         Integer minExp,
+	         Integer maxExp,
+	         JobType jobType,
+	
+	         // ===== LWD FILTERS =====
+	         NoticeStatus noticePreference,
+	         Integer maxNoticePeriod,
+	         Boolean lwdPreferred,
+	
+	         int page,
+	         int size
+	 ) {
+	
+	     Pageable pageable = PageRequest.of(
+	             page,
+	             size,
+	             Sort.by(Sort.Direction.DESC, "createdAt")
+	     );
+	
+	     Specification<Job> spec = JobSpecification.searchJobs(
+	             keyword,
+	             location,
+	             industry,
+	             companyName,
+	             minExp,
+	             maxExp,
+	             jobType,
+	             noticePreference,
+	             maxNoticePeriod,
+	             lwdPreferred,
+	             null,      // status not allowed for public
+	             true       // isPublicRequest = true
+	     );
+	
+	     Page<Job> jobPage = jobRepository.findAll(spec, pageable);
+	
+	     return toPagedResponse(jobPage.map(this::mapToResponse));
+	 }
 
-    // ==================================================
-    // SEARCH JOBS
-    // ==================================================
-    public PagedJobResponse searchJobs(
-    		String keyword,
-            String location,
-            String companyName,
-            Integer minExp,
-            Integer maxExp,
-            JobType jobType,
-            int page,
-            int size
-    ) {
 
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        Page<Job> jobPage = jobRepository.findAll(
-                JobSpecification.searchJobs(
-                        keyword,
-                        location,
-                        companyName,
-                        minExp,
-                        maxExp,
-                        jobType
-                ),
-                pageable
-        );
-
-        Page<JobResponse> responsePage = jobPage.map(this::mapToResponse);
-
-        return toPagedResponse(responsePage);
-    }
-    
-    public PagedJobResponse quickSearch(String keyword, int page, int size) {
-
-        Pageable pageable = PageRequest.of(
-                page,
-                size,
-                Sort.by(Sort.Direction.DESC, "createdAt")
-        );
-
-        Page<Job> jobPage = jobRepository.quickSearch(
-                keyword.toLowerCase(),
-                pageable
-        );
-
-        return toPagedResponse(jobPage.map(this::mapToResponse));
-    }
-    
-    public PagedJobResponse filterJobs(
-            String location,
-            JobType jobType,
-            Integer minExp,
-            Integer maxExp,
-            JobStatus status,
-            int page,
-            int size
-    ) {
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-
-        Page<Job> jobPage = jobRepository.findAll(
-                JobSpecification.filterJobs(
-                        location,
-                        jobType,
-                        minExp,
-                        maxExp,
-                        status
-                ),
-                pageable
-        );
-
-        return toPagedResponse(jobPage.map(this::mapToResponse));
-    }
-    
 
     public PagedJobResponse getSuggestedJobs(Long userId, int page, int size) {
         // 1️⃣ Get last applied job
@@ -423,21 +364,29 @@ public class JobService {
 
 
     
+    @Transactional(readOnly = true)
     public List<JobResponse> getSimilarJobs(Long jobId) {
 
         Job job = getJobByIdInternal(jobId);
 
-        return jobRepository.findSimilarJobs(
-                        job.getIndustry(),
-                        job.getJobType(),
-                        job.getId()
-                )
+        Specification<Job> spec = JobSpecification.similarJobs(
+                job.getIndustry(),
+                job.getJobType(),
+                job.getId()
+        );
+
+        Pageable pageable = PageRequest.of(
+                0,
+                6,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        return jobRepository.findAll(spec, pageable)
                 .stream()
-                .limit(6)
                 .map(this::mapToResponse)
                 .toList();
     }
-    
+
     public List<String> getSearchSuggestions(String keyword) {
 
         if (keyword == null || keyword.trim().isEmpty()) {
@@ -508,9 +457,10 @@ public class JobService {
     }
 
     private Job getJobByIdInternal(Long jobId) {
-        return jobRepository.findById(jobId)
+        return jobRepository.findByIdAndDeletedFalse(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
     }
+
 
     private void validateOwnership(User user, Job job) {
         if (user.getRole() != Role.ADMIN &&
@@ -562,9 +512,19 @@ public class JobService {
                 .industry(job.getIndustry())
                 .createdBy(job.getCreatedBy().getEmail())
                 .createdAt(job.getCreatedAt())
-                .minExperience(job.getMinExperience())   // new
-                .maxExperience(job.getMaxExperience())   // new
-                .jobType(job.getJobType() != null ? job.getJobType().name() : null)  // new
+                .minExperience(job.getMinExperience())
+                .maxExperience(job.getMaxExperience())
+                .jobType(job.getJobType() != null ? job.getJobType().name() : null)
+
+                // ===== LWD FIELDS =====
+                .noticePreference(
+                        job.getNoticePreference() != null
+                                ? job.getNoticePreference().name()
+                                : null
+                )
+                .maxNoticePeriod(job.getMaxNoticePeriod())
+                .lwdPreferred(job.getLwdPreferred())
+
                 .company(
                         CompanySummaryDTO.builder()
                                 .id(company.getId())
@@ -574,4 +534,5 @@ public class JobService {
                 )
                 .build();
     }
+    
 }
