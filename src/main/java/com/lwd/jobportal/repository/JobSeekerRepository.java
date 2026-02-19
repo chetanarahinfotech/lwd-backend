@@ -13,7 +13,10 @@ import java.util.Optional;
 @Repository
 public interface JobSeekerRepository extends JpaRepository<JobSeeker, Long> {
 
-	Optional<JobSeeker> findByUser_Id(Long userId);
+//	Optional<JobSeeker> findByUser_Id(Long userId);
+	
+	Optional<JobSeeker> findByUserId(Long userId);
+
 
     // Recruiter Filters
     List<JobSeeker> findByNoticeStatus(NoticeStatus status);

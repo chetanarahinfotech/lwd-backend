@@ -55,6 +55,9 @@ public class User {
     @JoinColumn(name = "company_id")
     private Company company;
 
+    // 🔥 ADD THIS (Bidirectional Mapping)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private JobSeeker jobSeekerProfile;
 
     @Column(updatable = false)
     private LocalDateTime createdAt;

@@ -11,10 +11,11 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 public class JobSeekerResponseDTO {
+	
+	private Long id;        // Profile ID
+	private Long userId;    // Owner user ID
 
-    private Long id;
 
-    private Long userId;
     private String fullName;
     private String email;
 

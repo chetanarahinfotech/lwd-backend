@@ -1,4 +1,5 @@
 package com.lwd.jobportal.service;
+
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerRequestDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerResponseDTO;
 import com.lwd.jobportal.entity.JobSeeker;
@@ -11,38 +12,53 @@ import com.lwd.jobportal.security.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional
 public class JobSeekerService {
 
     private final JobSeekerRepository jobSeekerRepository;
     private final UserRepository userRepository;
 
-    // ===============================
+    // =====================================================
     // JOB SEEKER METHODS
-    // ===============================
+    // =====================================================
 
     public JobSeekerResponseDTO createOrUpdateProfile(JobSeekerRequestDTO dto) {
 
         if (!SecurityUtils.hasRole(Role.JOB_SEEKER)) {
-            throw new RuntimeException("Access Denied");
+            throw new RuntimeException("Only Job Seekers can update profile");
         }
 
-        User user = userRepository.findById(SecurityUtils.getUserId())
+        Long userId = SecurityUtils.getUserId();
+
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        JobSeeker jobSeeker = mapToEntity(dto);
-        jobSeeker.setUser(user);
+        // 🔥 Fetch existing profile if present
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElse(null);
 
-        // Auto update immediate joiner logic
+        // 🔥 Create new if not exists
+        if (jobSeeker == null) {
+            jobSeeker = new JobSeeker();
+            jobSeeker.setUser(user);
+        }
+
+        // 🔥 Update fields
+        updateFields(jobSeeker, dto);
+
+        // 🔥 Auto Immediate Joiner Logic
         if (jobSeeker.getLastWorkingDay() != null &&
                 jobSeeker.getLastWorkingDay().isBefore(LocalDate.now())) {
-
             jobSeeker.setNoticeStatus(NoticeStatus.IMMEDIATE_JOINER);
+            jobSeeker.setImmediateJoiner(true);
         }
 
         JobSeeker saved = jobSeekerRepository.save(jobSeeker);
@@ -54,15 +70,15 @@ public class JobSeekerService {
 
         Long userId = SecurityUtils.getUserId();
 
-        JobSeeker jobSeeker = jobSeekerRepository.findByUser_Id(userId)
+        JobSeeker jobSeeker = jobSeekerRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Profile not found"));
 
         return mapToDTO(jobSeeker);
     }
 
-    // ===============================
+    // =====================================================
     // RECRUITER METHODS
-    // ===============================
+    // =====================================================
 
     public List<JobSeekerResponseDTO> getImmediateJoiners() {
         validateRecruiterAccess();
@@ -106,34 +122,34 @@ public class JobSeekerService {
     private void validateRecruiterAccess() {
         if (!(SecurityUtils.hasRole(Role.RECRUITER) ||
               SecurityUtils.hasRole(Role.RECRUITER_ADMIN))) {
-            throw new RuntimeException("Access Denied");
+            throw new RuntimeException("Only Recruiters can access this resource");
         }
     }
 
-    // ===============================
-    // MAPPER METHODS (INSIDE SERVICE)
-    // ===============================
+    // =====================================================
+    // PRIVATE HELPER METHODS
+    // =====================================================
 
-    private JobSeeker mapToEntity(JobSeekerRequestDTO dto) {
-        return JobSeeker.builder()
-                .noticeStatus(dto.getNoticeStatus())
-                .isServingNotice(dto.getIsServingNotice())
-                .lastWorkingDay(dto.getLastWorkingDay())
-                .noticePeriod(dto.getNoticePeriod())
-                .availableFrom(dto.getAvailableFrom())
-                .immediateJoiner(dto.getImmediateJoiner())
-                .currentCompany(dto.getCurrentCompany())
-                .currentCTC(dto.getCurrentCTC())
-                .expectedCTC(dto.getExpectedCTC())
-                .currentLocation(dto.getCurrentLocation())
-                .preferredLocation(dto.getPreferredLocation())
-                .totalExperience(dto.getTotalExperience())
-                .skills(dto.getSkills())
-                .resumeUrl(dto.getResumeUrl())
-                .build();
+    private void updateFields(JobSeeker jobSeeker, JobSeekerRequestDTO dto) {
+
+        jobSeeker.setNoticeStatus(dto.getNoticeStatus());
+        jobSeeker.setIsServingNotice(dto.getIsServingNotice());
+        jobSeeker.setLastWorkingDay(dto.getLastWorkingDay());
+        jobSeeker.setNoticePeriod(dto.getNoticePeriod());
+        jobSeeker.setAvailableFrom(dto.getAvailableFrom());
+        jobSeeker.setImmediateJoiner(dto.getImmediateJoiner());
+        jobSeeker.setCurrentCompany(dto.getCurrentCompany());
+        jobSeeker.setCurrentCTC(dto.getCurrentCTC());
+        jobSeeker.setExpectedCTC(dto.getExpectedCTC());
+        jobSeeker.setCurrentLocation(dto.getCurrentLocation());
+        jobSeeker.setPreferredLocation(dto.getPreferredLocation());
+        jobSeeker.setTotalExperience(dto.getTotalExperience());
+        jobSeeker.setSkills(dto.getSkills());
+        jobSeeker.setResumeUrl(dto.getResumeUrl());
     }
 
     private JobSeekerResponseDTO mapToDTO(JobSeeker entity) {
+
         return JobSeekerResponseDTO.builder()
                 .id(entity.getId())
                 .userId(entity.getUser().getId())
