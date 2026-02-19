@@ -68,13 +68,30 @@ public class JobSeekerService {
 
     public JobSeekerResponseDTO getMyProfile() {
 
+        if (!SecurityUtils.hasRole(Role.JOB_SEEKER)) {
+            throw new RuntimeException("Only Job Seekers can access profile");
+        }
+
         Long userId = SecurityUtils.getUserId();
 
-        JobSeeker jobSeeker = jobSeekerRepository.findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElse(null);
+
+        // 🔥 CREATE PROFILE IF NOT EXISTS
+        if (jobSeeker == null) {
+            jobSeeker = new JobSeeker();
+            jobSeeker.setUser(user);
+
+            jobSeeker = jobSeekerRepository.save(jobSeeker);
+        }
 
         return mapToDTO(jobSeeker);
     }
+
 
     // =====================================================
     // RECRUITER METHODS
