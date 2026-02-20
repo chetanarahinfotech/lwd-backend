@@ -1,6 +1,7 @@
 package com.lwd.jobportal.entity;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -72,9 +73,11 @@ public class Job {
 
     // ================= EXPERIENCE =================
     @Column(name = "min_experience")
+    @Min(0)
     private Integer minExperience; // 0 = fresher
 
     @Column(name = "max_experience")
+    @Min(0)
     private Integer maxExperience;
 
     // ================= STATUS =================
@@ -89,6 +92,7 @@ public class Job {
     private NoticeStatus noticePreference;
 
     @Column(name = "max_notice_period")
+    @Min(0)
     private Integer maxNoticePeriod; // in days
 
     @Column(nullable = false)
@@ -107,10 +111,13 @@ public class Job {
     private User createdBy;
     
     @Column(nullable = false)
+    @Builder.Default
     private Long viewCount = 0L;
     
+    @Builder.Default
     @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT FALSE")
     private Boolean deleted = false;
+
 
 
 

@@ -3,6 +3,7 @@ package com.lwd.jobportal.dto.jobdto;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import com.lwd.jobportal.enums.JobType;
+import com.lwd.jobportal.enums.NoticeStatus;
 
 @Data
 public class CreateJobRequest {
@@ -17,4 +18,9 @@ public class CreateJobRequest {
     private Integer minExperience;   // new
     private Integer maxExperience;   // new
     private JobType jobType;         // new
+    
+    // ================= LWD SPECIFIC =================
+    private NoticeStatus noticePreference;   // SERVING_NOTICE, IMMEDIATE_JOINER, etc.
+    private Integer maxNoticePeriod;         // in days
+    private Boolean lwdPreferred;            // true/false
 }

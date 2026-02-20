@@ -112,7 +112,14 @@ public class JobService {
         job.setIndustry(request.getIndustry());
         job.setMinExperience(request.getMinExperience());
         job.setMaxExperience(request.getMaxExperience());
-        job.setJobType(request.getJobType());            
+        job.setJobType(request.getJobType());   
+        job.setNoticePreference(request.getNoticePreference());
+        job.setMaxNoticePeriod(request.getMaxNoticePeriod());
+
+        if (request.getLwdPreferred() != null) {
+            job.setLwdPreferred(request.getLwdPreferred());
+        }
+
 
         return mapToResponse(jobRepository.save(job));
     }
@@ -481,6 +488,15 @@ public class JobService {
                 .minExperience(request.getMinExperience())   // new
                 .maxExperience(request.getMaxExperience())   // new
                 .jobType(request.getJobType())              // new
+             
+                // ✅ LWD Fields
+                .noticePreference(request.getNoticePreference())
+                .maxNoticePeriod(request.getMaxNoticePeriod())
+                .lwdPreferred(
+                        request.getLwdPreferred() != null ? 
+                        request.getLwdPreferred() : false
+                )
+                
                 .company(company)
                 .createdBy(creator)
                 .build();
