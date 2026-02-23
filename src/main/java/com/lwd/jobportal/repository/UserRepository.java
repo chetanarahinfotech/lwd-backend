@@ -1,5 +1,7 @@
 package com.lwd.jobportal.repository;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,6 +39,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	        Pageable pageable
 	);
 	
-	 long countByCompanyIdAndRole(Long companyId, Role role);
+	long countByCompanyIdAndRole(Long companyId, Role role);
+	 
+	long countByRole(Role role);
+	long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+	List<User> findTop5ByOrderByCreatedAtDesc();
+	long countByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
+	List<User> findByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
 
 }

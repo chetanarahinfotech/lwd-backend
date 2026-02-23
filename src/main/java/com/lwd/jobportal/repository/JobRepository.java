@@ -163,6 +163,25 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     	       ORDER BY COUNT(j) DESC
     	       """)
     	List<IndustryCount> findTopIndustries(Pageable pageable);
+    
+    
+    long countByStatus(JobStatus status);
+    long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
+    long countByCompanyIdAndStatus(Long companyId, JobStatus status);
+    long countByCreatedByIdAndStatus(Long recruiterId, JobStatus status);
+    List<Job> findTop5ByOrderByCreatedAtDesc();
+    List<Job> findByCompanyIdOrderByCreatedAtDesc(Long companyId, Pageable pageable);
+    List<Job> findByCreatedByIdOrderByCreatedAtDesc(Long recruiterId, Pageable pageable);
+    
+    @Query("SELECT j FROM Job j WHERE j.expiresAt BETWEEN :now AND :weekLater")
+    List<Job> findJobsExpiringSoon(LocalDateTime now, LocalDateTime weekLater);
+    
+    @Query("SELECT j FROM Job j WHERE j.id NOT IN (SELECT DISTINCT ja.job.id FROM JobApplication ja)")
+    List<Job> findJobsWithoutApplications();
 
+    @Query("SELECT j.industry, COUNT(j) FROM Job j GROUP BY j.industry")
+    List<Object[]> countJobsPerIndustry();
+
+    long countByCreatedById(Long recruiterId);
 
 }
