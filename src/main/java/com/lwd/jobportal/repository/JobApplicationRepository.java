@@ -1,8 +1,13 @@
 package com.lwd.jobportal.repository;
 
+import java.time.LocalDateTime;
+import java.util.Collection;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.lwd.jobportal.entity.JobApplication;
@@ -57,5 +62,26 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             ApplicationStatus status,
             Pageable pageable
     );
+    
+    long countByAppliedAtBetween(LocalDateTime start, LocalDateTime end);
+    long countByJobCompanyId(Long companyId);
+    long countByJobCreatedById(Long recruiterId);
+    
+    @Query("SELECT DATE(ja.appliedAt) as day, COUNT(ja) as cnt FROM JobApplication ja " +
+           "WHERE ja.appliedAt >= :weekAgo GROUP BY DATE(ja.appliedAt)")
+    List<Object[]> countApplicationsPerDay(LocalDateTime weekAgo);
+    
+    List<JobApplication> findTop5ByOrderByAppliedAtDesc();
+    
+    // funnel queries for company
+    @Query("SELECT ja.status, COUNT(ja) FROM JobApplication ja WHERE ja.job.company.id = :companyId GROUP BY ja.status")
+    List<Object[]> countByStatusForCompany(Long companyId);
+    
+    long countByJobCreatedByIdAndStatus(Long recruiterId, ApplicationStatus status);
+    long countByJobId(Long jobId);
+    long countByJobIdAndStatus(Long jobId, ApplicationStatus status);
+    long countByJobIdAndStatusIn(Long jobId, Collection<ApplicationStatus> statuses);
+    List<JobApplication> findTop5ByJobCreatedByIdOrderByAppliedAtDesc(Long recruiterId);
+  
 
 }
