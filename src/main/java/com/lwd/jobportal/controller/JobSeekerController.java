@@ -32,6 +32,12 @@ public class JobSeekerController {
     public JobSeekerResponseDTO getMyProfile() {
         return jobSeekerService.getMyProfile();
     }
+    
+    @GetMapping("/user/{userId}")
+    public JobSeekerResponseDTO getJobSeekerByUserId(
+    		@PathVariable Long userId) {
+        return jobSeekerService.getJobSeekerByUserId(userId);
+    }
 
     // =========================================
     // RECRUITER ENDPOINTS
