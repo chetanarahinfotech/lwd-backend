@@ -6,11 +6,14 @@ import com.lwd.jobportal.entity.JobSeeker;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.NoticeStatus;
 import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerRepository;
 import com.lwd.jobportal.repository.UserRepository;
 import com.lwd.jobportal.security.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,13 +35,13 @@ public class JobSeekerService {
     public JobSeekerResponseDTO createOrUpdateProfile(JobSeekerRequestDTO dto) {
 
         if (!SecurityUtils.hasRole(Role.JOB_SEEKER)) {
-            throw new RuntimeException("Only Job Seekers can update profile");
+            throw new AccessDeniedException("Only Job Seekers can update profile");
         }
 
         Long userId = SecurityUtils.getUserId();
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         // 🔥 Fetch existing profile if present
         JobSeeker jobSeeker = jobSeekerRepository
@@ -69,13 +72,32 @@ public class JobSeekerService {
     public JobSeekerResponseDTO getMyProfile() {
 
         if (!SecurityUtils.hasRole(Role.JOB_SEEKER)) {
-            throw new RuntimeException("Only Job Seekers can access profile");
+            throw new AccessDeniedException("Only Job Seekers can access profile");
         }
 
         Long userId = SecurityUtils.getUserId();
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElse(null);
+
+        // 🔥 CREATE PROFILE IF NOT EXISTS
+        if (jobSeeker == null) {
+            jobSeeker = new JobSeeker();
+            jobSeeker.setUser(user);
+
+            jobSeeker = jobSeekerRepository.save(jobSeeker);
+        }
+
+        return mapToDTO(jobSeeker);
+    }
+    
+    public JobSeekerResponseDTO getJobSeekerByUserId(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
@@ -139,7 +161,7 @@ public class JobSeekerService {
     private void validateRecruiterAccess() {
         if (!(SecurityUtils.hasRole(Role.RECRUITER) ||
               SecurityUtils.hasRole(Role.RECRUITER_ADMIN))) {
-            throw new RuntimeException("Only Recruiters can access this resource");
+            throw new AccessDeniedException("Only Recruiters can access this resource");
         }
     }
 
