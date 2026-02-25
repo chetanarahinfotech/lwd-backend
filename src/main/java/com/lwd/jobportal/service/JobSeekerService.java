@@ -1,7 +1,11 @@
 package com.lwd.jobportal.service;
 
+import com.lwd.jobportal.dto.comman.PagedResponse;
+import com.lwd.jobportal.dto.comman.PaginationUtil;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerRequestDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerResponseDTO;
+import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchRequest;
+import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchResponse;
 import com.lwd.jobportal.entity.JobSeeker;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.NoticeStatus;
@@ -10,15 +14,22 @@ import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerRepository;
 import com.lwd.jobportal.repository.UserRepository;
 import com.lwd.jobportal.security.SecurityUtils;
+import com.lwd.jobportal.specification.JobSeekerSpecification;
 
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +38,7 @@ public class JobSeekerService {
 
     private final JobSeekerRepository jobSeekerRepository;
     private final UserRepository userRepository;
+
 
     // =====================================================
     // JOB SEEKER METHODS
@@ -69,6 +81,8 @@ public class JobSeekerService {
         return mapToDTO(saved);
     }
 
+    
+    
     public JobSeekerResponseDTO getMyProfile() {
 
         if (!SecurityUtils.hasRole(Role.JOB_SEEKER)) {
@@ -95,6 +109,8 @@ public class JobSeekerService {
         return mapToDTO(jobSeeker);
     }
     
+    
+    
     public JobSeekerResponseDTO getJobSeekerByUserId(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -113,61 +129,70 @@ public class JobSeekerService {
 
         return mapToDTO(jobSeeker);
     }
+    
+    
+    
+    
+    public PagedResponse<JobSeekerSearchResponse> searchJobSeekers(
+            JobSeekerSearchRequest request
+    ) {
 
+//        validateRecruiterAccess();
 
-    // =====================================================
-    // RECRUITER METHODS
-    // =====================================================
+        Specification<JobSeeker> specification =
+                JobSeekerSpecification.searchJobSeekers(
+                        request.getKeyword(),
+                        request.getSkills(),
+                        request.getCurrentLocation(),
+                        request.getPreferredLocation(),
+                        request.getMinExperience(),
+                        request.getMaxExperience(),
+                        request.getMinExpectedCTC(),
+                        request.getMaxExpectedCTC(),
+                        request.getNoticeStatus(),
+                        request.getMaxNoticePeriod(),
+                        request.getImmediateJoiner(),
+                        request.getAvailableBefore()
+                );
 
-    public List<JobSeekerResponseDTO> getImmediateJoiners() {
-        validateRecruiterAccess();
+        Sort sort = Sort.by(
+                Sort.Direction.fromString(
+                        request.getSortDirection() == null ? "DESC" : request.getSortDirection()
+                ),
+                request.getSortBy() == null ? "totalExperience" : request.getSortBy()
+        );
 
-        return jobSeekerRepository.findByImmediateJoinerTrue()
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
+        Pageable pageable = PageRequest.of(
+                request.getPage() == null ? 0 : request.getPage(),
+                request.getSize() == null ? 10 : request.getSize(),
+                sort
+        );
+
+        Page<JobSeeker> jobSeekerPage =
+                jobSeekerRepository.findAll(specification, pageable);
+
+        List<JobSeekerSearchResponse> content =
+                jobSeekerPage.getContent()
+                        .stream()
+                        .map(this::toSearchResponse)
+                        .toList();
+
+        return PaginationUtil.buildPagedResponse(jobSeekerPage, content);
     }
 
-    public List<JobSeekerResponseDTO> getByNoticeStatus(NoticeStatus status) {
-        validateRecruiterAccess();
 
-        return jobSeekerRepository.findByNoticeStatus(status)
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
-
-    public List<JobSeekerResponseDTO> getLwdWithinDays(int days) {
-        validateRecruiterAccess();
-
-        LocalDate today = LocalDate.now();
-        LocalDate endDate = today.plusDays(days);
-
-        return jobSeekerRepository.findByLastWorkingDayBetween(today, endDate)
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
-
-    public List<JobSeekerResponseDTO> searchByLocation(String location) {
-        validateRecruiterAccess();
-
-        return jobSeekerRepository.findByPreferredLocation(location)
-                .stream()
-                .map(this::mapToDTO)
-                .toList();
-    }
-
-    private void validateRecruiterAccess() {
-        if (!(SecurityUtils.hasRole(Role.RECRUITER) ||
-              SecurityUtils.hasRole(Role.RECRUITER_ADMIN))) {
-            throw new AccessDeniedException("Only Recruiters can access this resource");
-        }
-    }
 
     // =====================================================
     // PRIVATE HELPER METHODS
     // =====================================================
+    
+//    private void validateRecruiterAccess() {
+//        if (!(SecurityUtils.hasRole(Role.ADMIN) ||
+//        		SecurityUtils.hasRole(Role.RECRUITER) ||
+//        		SecurityUtils.hasRole(Role.RECRUITER_ADMIN))) {
+//            throw new AccessDeniedException("Only Recruiters can access this resource");
+//        }
+//    }
 
     private void updateFields(JobSeeker jobSeeker, JobSeekerRequestDTO dto) {
 
@@ -183,7 +208,6 @@ public class JobSeekerService {
         jobSeeker.setCurrentLocation(dto.getCurrentLocation());
         jobSeeker.setPreferredLocation(dto.getPreferredLocation());
         jobSeeker.setTotalExperience(dto.getTotalExperience());
-        jobSeeker.setSkills(dto.getSkills());
         jobSeeker.setResumeUrl(dto.getResumeUrl());
     }
 
@@ -206,8 +230,31 @@ public class JobSeekerService {
                 .currentLocation(entity.getCurrentLocation())
                 .preferredLocation(entity.getPreferredLocation())
                 .totalExperience(entity.getTotalExperience())
-                .skills(entity.getSkills())
                 .resumeUrl(entity.getResumeUrl())
                 .build();
     }
+    
+   
+    private JobSeekerSearchResponse toSearchResponse(JobSeeker jobSeeker) {
+
+        return JobSeekerSearchResponse.builder()
+                .id(jobSeeker.getId())
+                .fullName(jobSeeker.getUser().getName())
+                .email(jobSeeker.getUser().getEmail())
+                .currentCompany(jobSeeker.getCurrentCompany())
+                .totalExperience(jobSeeker.getTotalExperience())
+                .expectedCTC(jobSeeker.getExpectedCTC())
+                .currentLocation(jobSeeker.getCurrentLocation())
+                .immediateJoiner(jobSeeker.getImmediateJoiner())
+                .noticePeriod(jobSeeker.getNoticePeriod())
+                .skills(
+                        jobSeeker.getSkills()
+                                .stream()
+                                .map(skill -> skill.getName())
+                                .collect(Collectors.toList())
+                )
+                .build();
+    }
+
+
 }

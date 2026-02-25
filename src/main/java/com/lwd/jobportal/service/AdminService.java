@@ -11,8 +11,8 @@ import org.springframework.stereotype.Service;
 
 import com.lwd.jobportal.dto.admin.CompanyAdminDTO;
 import com.lwd.jobportal.dto.admin.JobAdminDTO;
-import com.lwd.jobportal.dto.admin.PagedResponse;
 import com.lwd.jobportal.dto.admin.UserAdminDTO;
+import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;

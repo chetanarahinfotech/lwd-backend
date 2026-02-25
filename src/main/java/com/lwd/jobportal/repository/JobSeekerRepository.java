@@ -4,6 +4,7 @@ import com.lwd.jobportal.entity.JobSeeker;
 import com.lwd.jobportal.enums.NoticeStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -11,7 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface JobSeekerRepository extends JpaRepository<JobSeeker, Long> {
+public interface JobSeekerRepository extends JpaRepository<JobSeeker, Long>, JpaSpecificationExecutor<JobSeeker> {
 
 //	Optional<JobSeeker> findByUser_Id(Long userId);
 	

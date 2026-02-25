@@ -33,6 +33,5 @@ public class JobSeekerResponseDTO {
     private String currentLocation;
     private String preferredLocation;
     private Integer totalExperience;
-    private String skills;
     private String resumeUrl;
 }

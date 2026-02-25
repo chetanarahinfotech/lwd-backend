@@ -4,7 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import com.lwd.jobportal.dto.admin.PagedResponse;
+import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.jobdto.JobResponse;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.security.SecurityUtils;

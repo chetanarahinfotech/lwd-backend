@@ -15,7 +15,6 @@ import com.lwd.jobportal.dto.jobdto.JobSummaryDTO;
 import com.lwd.jobportal.entity.*;
 import com.lwd.jobportal.enums.*;
 import com.lwd.jobportal.exception.BadRequestException;
-import com.lwd.jobportal.exception.ForbiddenActionException;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.exception.UnauthorizedException;
 import com.lwd.jobportal.repository.*;
@@ -66,111 +65,6 @@ public class JobApplicationService {
 
         jobApplicationRepository.save(application);
     }
-
-
-    // ================= ADMIN: APPLICATIONS BY JOB =================
-    @PreAuthorize("hasRole('ADMIN')")
-    @Transactional(readOnly = true)
-    public PagedApplicationsResponse getApplicationsByJobAdmin(Long jobId, int page, int size) {
-    	if (!jobRepository.existsById(jobId)) {
-            throw new ResourceNotFoundException("Job not found with id: " + jobId);
-        }
-        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
-        Page<JobApplication> applications = jobApplicationRepository.findByJobId(jobId, pageable);
-        return buildPagedResponse(applications);
-    }
-
-    // ================= COMPANY ADMIN / RECRUITER: APPLICATIONS BY JOB =================
-    @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
-    @Transactional(readOnly = true)
-    public PagedApplicationsResponse getApplicationsByJobCompany(
-            Long jobId, Long userId, int page, int size) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        Company company = companyRepository.findByCreatedById(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found for this user"));
-
-        Job job = jobRepository.findById(jobId)
-                .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
-
-        if (!job.getCompany().getId().equals(company.getId())) {
-        	throw new ForbiddenActionException(
-        	        "You are not allowed to view applications for this job"
-        	);
-
-        }
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
-        Page<JobApplication> applications =
-                jobApplicationRepository.findByJobIdAndJobCompanyId(jobId, company.getId(), pageable);
-
-        return buildPagedResponse(applications);
-    }
-
-
-    // ================= JOB SEEKER: MY APPLICATIONS =================
-    @PreAuthorize("hasRole('JOB_SEEKER')")
-    @Transactional(readOnly = true)
-    public PagedApplicationsResponse getMyApplications(Long jobSeekerId, int page, int size) {
-    	if (!userRepository.existsById(jobSeekerId)) {
-            throw new ResourceNotFoundException("Job seeker not found");
-        }
-        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
-        Page<JobApplication> applications = jobApplicationRepository.findByJobSeekerId(jobSeekerId, pageable);
-        return buildPagedResponse(applications);
-    }
-
-    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
-    @Transactional
-    public void changeApplicationStatus(
-            Long applicationId,
-            ApplicationStatus newStatus,
-            Long userId,
-            Role role
-    ) {
-
-        JobApplication application = jobApplicationRepository.findById(applicationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
-        // ADMIN → allow directly
-        if (role == Role.ADMIN) {
-            application.setStatus(newStatus);
-            application.setUpdatedBy(userId); 
-            jobApplicationRepository.save(application);
-            return;
-        }
-
-        Company company = companyRepository.findByCreatedById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
-
-        if (!company.getId().equals(application.getJob().getCompany().getId())) {
-            throw new AccessDeniedException("You are not allowed to update this application");
-        }
-
-        application.setStatus(newStatus);
-        application.setUpdatedBy(userId); // 🔹 who updated
-        jobApplicationRepository.save(application);
-    }
-
-
-
-    // ================= COMPANY ADMIN / RECRUITER: ALL COMPANY APPLICATIONS =================
-    @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
-    @Transactional(readOnly = true)
-    public PagedApplicationsResponse getMyCompanyApplications(Long userId, int page, int size) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        Company company = companyRepository.findByCreatedById(user.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found for this user"));
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
-        Page<JobApplication> applications = jobApplicationRepository.findByJobCompanyId(company.getId(), pageable);
-
-        return buildPagedResponse(applications);
-    }
     
     
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
@@ -220,6 +114,116 @@ public class JobApplicationService {
         return buildPagedResponse(applications);
     }
 
+
+
+    // ================= ADMIN: APPLICATIONS BY JOB =================
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    @Transactional(readOnly = true)
+    public PagedApplicationsResponse getApplicationsByJobId(Long jobId, int page, int size) {
+    	if (!jobRepository.existsById(jobId)) {
+            throw new ResourceNotFoundException("Job not found with id: " + jobId);
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
+        Page<JobApplication> applications = jobApplicationRepository.findByJobId(jobId, pageable);
+        return buildPagedResponse(applications);
+    }
+    
+    
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    @Transactional
+    public void changeApplicationStatus(
+            Long applicationId,
+            ApplicationStatus newStatus,
+            Long userId,
+            Role role
+    ) {
+
+        JobApplication application = jobApplicationRepository.findById(applicationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Application not found"));
+        // ADMIN → allow directly
+        if (role == Role.ADMIN) {
+            application.setStatus(newStatus);
+            application.setUpdatedBy(userId); 
+            jobApplicationRepository.save(application);
+            return;
+        }
+
+        Company company = companyRepository.findByCreatedById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+
+        if (!company.getId().equals(application.getJob().getCompany().getId())) {
+            throw new AccessDeniedException("You are not allowed to update this application");
+        }
+
+        application.setStatus(newStatus);
+        application.setUpdatedBy(userId); // 🔹 who updated
+        jobApplicationRepository.save(application);
+    }
+    
+    // ================= JOB SEEKER: MY APPLICATIONS =================
+    @PreAuthorize("hasRole('JOB_SEEKER')")
+    @Transactional(readOnly = true)
+    public PagedApplicationsResponse getMyApplications(Long jobSeekerId, int page, int size) {
+    	if (!userRepository.existsById(jobSeekerId)) {
+            throw new ResourceNotFoundException("Job seeker not found");
+        }
+        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
+        Page<JobApplication> applications = jobApplicationRepository.findByJobSeekerId(jobSeekerId, pageable);
+        return buildPagedResponse(applications);
+    }
+
+
+//    // ================= COMPANY ADMIN / RECRUITER: APPLICATIONS BY JOB =================
+//    @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
+//    @Transactional(readOnly = true)
+//    public PagedApplicationsResponse getApplicationsByJobCompany(
+//            Long jobId, Long userId, int page, int size) {
+//
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+//
+//        Company company = companyRepository.findByCreatedById(user.getId())
+//                .orElseThrow(() -> new ResourceNotFoundException("Company not found for this user"));
+//
+//        Job job = jobRepository.findById(jobId)
+//                .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
+//
+//        if (!job.getCompany().getId().equals(company.getId())) {
+//        	throw new ForbiddenActionException(
+//        	        "You are not allowed to view applications for this job"
+//        	);
+//
+//        }
+//
+//        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
+//        Page<JobApplication> applications =
+//                jobApplicationRepository.findByJobIdAndJobCompanyId(jobId, company.getId(), pageable);
+//
+//        return buildPagedResponse(applications);
+//    }
+
+
+
+
+//    // ================= COMPANY ADMIN / RECRUITER: ALL COMPANY APPLICATIONS =================
+//    @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
+//    @Transactional(readOnly = true)
+//    public PagedApplicationsResponse getMyCompanyApplications(Long userId, int page, int size) {
+//
+//        User user = userRepository.findById(userId)
+//                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+//
+//        Company company = companyRepository.findByCreatedById(user.getId())
+//                .orElseThrow(() -> new ResourceNotFoundException("Company not found for this user"));
+//
+//        Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
+//        Page<JobApplication> applications = jobApplicationRepository.findByJobCompanyId(company.getId(), pageable);
+//
+//        return buildPagedResponse(applications);
+//    }
+//    
+    
+   
     
 
     // ================= HELPER: BUILD PAGED RESPONSE =================

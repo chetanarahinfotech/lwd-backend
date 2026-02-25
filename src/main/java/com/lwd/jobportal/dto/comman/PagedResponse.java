@@ -1,4 +1,4 @@
-package com.lwd.jobportal.dto.admin;
+package com.lwd.jobportal.dto.comman;
 
 import java.util.List;
 import lombok.AllArgsConstructor;
