@@ -6,12 +6,15 @@ import com.lwd.jobportal.dto.jobseekerdto.JobSeekerRequestDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerResponseDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchRequest;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchResponse;
+import com.lwd.jobportal.dto.jobseekerdto.SkillResponseDTO;
 import com.lwd.jobportal.entity.JobSeeker;
+import com.lwd.jobportal.entity.Skill;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.NoticeStatus;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerRepository;
+import com.lwd.jobportal.repository.SkillRepository;
 import com.lwd.jobportal.repository.UserRepository;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.specification.JobSeekerSpecification;
@@ -28,7 +31,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,6 +45,7 @@ public class JobSeekerService {
 
     private final JobSeekerRepository jobSeekerRepository;
     private final UserRepository userRepository;
+    private final SkillRepository skillRepository;
 
 
     // =====================================================
@@ -138,6 +146,118 @@ public class JobSeekerService {
     // =====================================================
     // ADD & UPDATE SKILLS
     // =====================================================
+    
+    @Transactional
+    public void updateMySkills(List<String> skillNames) {
+    	 Long userId = SecurityUtils.getUserId(); 
+    	 
+    	 JobSeeker jobSeeker = jobSeekerRepository
+    	            .findByUserId(userId)   // ✅ correct method
+    	            .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        // Clear skills if empty
+        if (skillNames == null || skillNames.isEmpty()) {
+            jobSeeker.getSkills().clear();
+            return;
+        }
+
+        // =====================================================
+        // 1️⃣ Normalize + Remove duplicates
+        // =====================================================
+        Set<String> normalizedNames = skillNames.stream()
+                .filter(Objects::nonNull)
+                .map(name -> name.trim().toLowerCase())
+                .filter(name -> !name.isBlank())
+                .collect(Collectors.toSet());
+
+        // =====================================================
+        // 2️⃣ Fetch existing skills (ONE QUERY)
+        // =====================================================
+        List<Skill> existingSkills =
+                skillRepository.findExistingSkills(normalizedNames);
+
+        Map<String, Skill> existingMap = existingSkills.stream()
+                .collect(Collectors.toMap(
+                        skill -> skill.getName().toLowerCase(),
+                        skill -> skill
+                ));
+
+        // =====================================================
+        // 3️⃣ Create missing skills (Batch insert)
+        // =====================================================
+        List<Skill> newSkills = new ArrayList<>();
+
+        for (String name : normalizedNames) {
+            if (!existingMap.containsKey(name)) {
+                newSkills.add(
+                        Skill.builder()
+                                .name(name)
+                                .build()
+                );
+            }
+        }
+
+        if (!newSkills.isEmpty()) {
+            try {
+                skillRepository.saveAll(newSkills);
+                existingSkills.addAll(newSkills);
+            } catch (Exception e) {
+                // ⚠ In case of race condition (two users insert same skill)
+                // Fetch again safely
+                existingSkills = skillRepository.findExistingSkills(normalizedNames);
+            }
+        }
+
+        // =====================================================
+        // 4️⃣ Attach unique skills
+        // =====================================================
+        jobSeeker.getSkills().clear();
+        jobSeeker.getSkills().addAll(existingSkills);
+    }
+
+    
+    @Transactional(readOnly = true)
+    public Set<String> getMySkills() {
+        Long userId = SecurityUtils.getUserId();
+        return skillRepository.findSkillNamesByUserId(userId);
+    }
+    
+    
+    public PagedResponse<SkillResponseDTO> getAllSkills(
+            String keyword,
+            Integer page,
+            Integer size
+    ) {
+
+        Pageable pageable = PageRequest.of(
+                page == null ? 0 : page,
+                size == null ? 10 : size,
+                Sort.by("name").ascending()
+        );
+
+        Page<Skill> skillPage;
+
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            skillPage = skillRepository
+                    .findByNameContainingIgnoreCase(keyword.trim(), pageable);
+        } else {
+            skillPage = skillRepository.findAll(pageable);
+        }
+
+        List<SkillResponseDTO> content = skillPage
+                .stream()
+                .map(skill -> SkillResponseDTO.builder()
+                        .id(skill.getId())
+                        .name(skill.getName())
+                        .build())
+                .toList();
+
+        return PaginationUtil.buildPagedResponse(skillPage, content);
+    }
+
+
+
+
     
     // =====================================================
     // ABOUT SECTION

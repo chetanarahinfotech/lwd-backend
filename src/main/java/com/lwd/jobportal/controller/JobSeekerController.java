@@ -5,9 +5,13 @@ import com.lwd.jobportal.dto.jobseekerdto.JobSeekerRequestDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerResponseDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchRequest;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchResponse;
+import com.lwd.jobportal.dto.jobseekerdto.SkillResponseDTO;
+import com.lwd.jobportal.dto.jobseekerdto.UpdateSkillsRequest;
 import com.lwd.jobportal.service.JobSeekerService;
 
 import lombok.RequiredArgsConstructor;
+
+import java.util.Set;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -35,6 +39,32 @@ public class JobSeekerController {
     public JobSeekerResponseDTO getMyProfile() {
         return jobSeekerService.getMyProfile();
     }
+    
+    @GetMapping("/myskills")
+    public ResponseEntity<Set<String>> getMySkills() {
+    	return ResponseEntity.ok(jobSeekerService.getMySkills());
+    }
+    
+    @PutMapping("/updateskills")
+    public ResponseEntity<?> updateMySkills(
+            @RequestBody UpdateSkillsRequest request
+    ) {
+
+        jobSeekerService.updateMySkills(request.getSkills());
+
+        return ResponseEntity.ok("Skills updated successfully");
+    }
+    
+    
+    @GetMapping("/skills")
+    public PagedResponse<SkillResponseDTO> getSkills(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size
+    ) {
+        return jobSeekerService.getAllSkills(keyword, page, size);
+    }
+
     
     @GetMapping("/user/{userId}")
     public JobSeekerResponseDTO getJobSeekerByUserId(
