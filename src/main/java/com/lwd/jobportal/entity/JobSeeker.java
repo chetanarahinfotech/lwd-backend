@@ -93,15 +93,24 @@ public class JobSeeker {
     @Column(name = "total_experience")
     private Integer totalExperience;
 
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-        name = "job_seeker_skills",
-        joinColumns = @JoinColumn(name = "job_seeker_id"),
-        inverseJoinColumns = @JoinColumn(name = "skill_id"),
+        name = "job_seeker_skills", // better name now
+        joinColumns = @JoinColumn(
+            name = "user_id",              // 🔥 join using user_id
+            referencedColumnName = "user_id"
+        ),
+        inverseJoinColumns = @JoinColumn(
+            name = "skill_id",
+            referencedColumnName = "id"
+        ),
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"user_id", "skill_id"})
+        },
         indexes = {
-            @Index(name = "idx_js_skill_js_id", columnList = "job_seeker_id"),
-            @Index(name = "idx_js_skill_skill_id", columnList = "skill_id"),
-            @Index(name = "idx_js_skill_composite", columnList = "skill_id, job_seeker_id")
+            @Index(name = "idx_user_skill_user", columnList = "user_id"),
+            @Index(name = "idx_user_skill_skill", columnList = "skill_id"),
+            @Index(name = "idx_user_skill_composite", columnList = "skill_id, user_id")
         }
     )
     private Set<Skill> skills;

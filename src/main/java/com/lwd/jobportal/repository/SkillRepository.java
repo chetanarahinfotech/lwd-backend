@@ -1,10 +1,16 @@
 package com.lwd.jobportal.repository;
 
 import com.lwd.jobportal.entity.Skill;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 public interface SkillRepository extends JpaRepository<Skill, Long> {
 
@@ -18,5 +24,18 @@ public interface SkillRepository extends JpaRepository<Skill, Long> {
     List<Skill> findByNameContainingIgnoreCase(String keyword);
 
     // 🔥 Bulk fetch (very useful)
-    List<Skill> findByNameIn(List<String> names);
+    @Query("SELECT s FROM Skill s WHERE LOWER(s.name) IN :names")
+    List<Skill> findExistingSkills(@Param("names") Set<String> names);
+    
+    @Query("""
+		       select s.name 
+		       from JobSeeker js
+		       join js.skills s
+		       where js.user.id = :userId
+		       """)
+		Set<String> findSkillNamesByUserId(@Param("userId") Long userId);
+    
+    Page<Skill> findByNameContainingIgnoreCase(String keyword, Pageable pageable);
+
+
 }
