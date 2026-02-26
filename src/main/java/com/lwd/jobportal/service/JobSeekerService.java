@@ -41,7 +41,7 @@ public class JobSeekerService {
 
 
     // =====================================================
-    // JOB SEEKER METHODS
+    // CREATE UPDATE PROFILE
     // =====================================================
 
     public JobSeekerResponseDTO createOrUpdateProfile(JobSeekerRequestDTO dto) {
@@ -81,7 +81,9 @@ public class JobSeekerService {
         return mapToDTO(saved);
     }
 
-    
+    // =====================================================
+    // GET PROFILE
+    // =====================================================
     
     public JobSeekerResponseDTO getMyProfile() {
 
@@ -111,6 +113,9 @@ public class JobSeekerService {
     
     
     
+    // =====================================================
+    // GET PROFILE BY ID
+    // =====================================================
     public JobSeekerResponseDTO getJobSeekerByUserId(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
@@ -130,55 +135,70 @@ public class JobSeekerService {
         return mapToDTO(jobSeeker);
     }
     
+    // =====================================================
+    // ADD & UPDATE SKILLS
+    // =====================================================
+    
+    // =====================================================
+    // ABOUT SECTION
+    // =====================================================
+    
+    // =====================================================
+    // JOB SEEKER HEADING
+    // =====================================================
     
     
+    // =====================================================
+    // SEARCH JOBSEEKERS
+    // =====================================================
     
-    public PagedResponse<JobSeekerSearchResponse> searchJobSeekers(
-            JobSeekerSearchRequest request
-    ) {
+	public PagedResponse<JobSeekerSearchResponse> searchJobSeekers(
+	        JobSeekerSearchRequest request
+	) {
+	
+	    Specification<JobSeeker> specification =
+	            JobSeekerSpecification.searchJobSeekers(
+	                    request.getKeyword(),
+	                    request.getSkills(),
+	                    request.getCurrentLocation(),
+	                    request.getPreferredLocation(),
+	                    request.getMinExperience(),
+	                    request.getMaxExperience(),
+	                    request.getMinExpectedCTC(),
+	                    request.getMaxExpectedCTC(),
+	                    request.getNoticeStatus(),
+	                    request.getMaxNoticePeriod(),
+	                    request.getImmediateJoiner(),
+	                    request.getAvailableBefore()
+	            );
+	
+	    Sort.Direction direction =
+	            request.getSortDirection() != null
+	                    ? Sort.Direction.fromString(request.getSortDirection())
+	                    : Sort.Direction.DESC;
+	
+	    String sortBy =
+	            request.getSortBy() != null
+	                    ? request.getSortBy()
+	                    : "totalExperience";
+	
+	    Pageable pageable = PageRequest.of(
+	            request.getPage() != null ? request.getPage() : 0,
+	            request.getSize() != null ? request.getSize() : 10,
+	            Sort.by(direction, sortBy)
+	    );
+	
+	    Page<JobSeeker> jobSeekerPage =
+	            jobSeekerRepository.findAll(specification, pageable);
+	
+	    List<JobSeekerSearchResponse> content =
+	            jobSeekerPage.stream()
+	                    .map(this::toSearchResponse)
+	                    .toList();
+	
+	    return PaginationUtil.buildPagedResponse(jobSeekerPage, content);
+	}
 
-//        validateRecruiterAccess();
-
-        Specification<JobSeeker> specification =
-                JobSeekerSpecification.searchJobSeekers(
-                        request.getKeyword(),
-                        request.getSkills(),
-                        request.getCurrentLocation(),
-                        request.getPreferredLocation(),
-                        request.getMinExperience(),
-                        request.getMaxExperience(),
-                        request.getMinExpectedCTC(),
-                        request.getMaxExpectedCTC(),
-                        request.getNoticeStatus(),
-                        request.getMaxNoticePeriod(),
-                        request.getImmediateJoiner(),
-                        request.getAvailableBefore()
-                );
-
-        Sort sort = Sort.by(
-                Sort.Direction.fromString(
-                        request.getSortDirection() == null ? "DESC" : request.getSortDirection()
-                ),
-                request.getSortBy() == null ? "totalExperience" : request.getSortBy()
-        );
-
-        Pageable pageable = PageRequest.of(
-                request.getPage() == null ? 0 : request.getPage(),
-                request.getSize() == null ? 10 : request.getSize(),
-                sort
-        );
-
-        Page<JobSeeker> jobSeekerPage =
-                jobSeekerRepository.findAll(specification, pageable);
-
-        List<JobSeekerSearchResponse> content =
-                jobSeekerPage.getContent()
-                        .stream()
-                        .map(this::toSearchResponse)
-                        .toList();
-
-        return PaginationUtil.buildPagedResponse(jobSeekerPage, content);
-    }
 
 
 
@@ -193,6 +213,11 @@ public class JobSeekerService {
 //            throw new AccessDeniedException("Only Recruiters can access this resource");
 //        }
 //    }
+    
+    
+    // =====================================================
+    // MAPPINGS METHODS
+    // =====================================================
 
     private void updateFields(JobSeeker jobSeeker, JobSeekerRequestDTO dto) {
 

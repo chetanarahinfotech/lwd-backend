@@ -16,86 +16,84 @@ public class JobSeekerSpecification {
     private JobSeekerSpecification() {}
 
     public static Specification<JobSeeker> searchJobSeekers(
-
             String keyword,
             List<String> skillNames,
             String currentLocation,
             String preferredLocation,
-
             Integer minExperience,
             Integer maxExperience,
-
             Double minExpectedCTC,
             Double maxExpectedCTC,
-
             NoticeStatus noticeStatus,
             Integer maxNoticePeriod,
             Boolean immediateJoiner,
-
             LocalDate availableBefore
     ) {
 
         return (root, query, cb) -> {
 
-            query.distinct(true); // prevent duplicates (many-to-many)
-
-            List<Predicate> predicates = new ArrayList<>();
-
-            // =========================================
-            // JOIN USER (Always needed for name search)
-            // =========================================
-            Join<JobSeeker, User> userJoin = root.join("user", JoinType.LEFT);
-
-            // =========================================
-            // CONDITIONAL SKILL JOIN
-            // =========================================
-            Join<JobSeeker, Skill> skillJoin = null;
+            boolean isCountQuery = query.getResultType() == Long.class;
 
             boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
             boolean hasSkills = skillNames != null && !skillNames.isEmpty();
+
+            // ===============================
+            // 🔥 FIX N+1 HERE
+            // ===============================
+            if (!isCountQuery) {
+
+                // Fetch user always (needed in DTO)
+                root.fetch("user", JoinType.LEFT);
+
+                // Fetch skills ONLY when filtering by skill or keyword
+                if (hasKeyword || hasSkills) {
+                    root.fetch("skills", JoinType.LEFT);
+                }
+
+                query.distinct(true);
+            }
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            Join<JobSeeker, User> userJoin = root.join("user", JoinType.LEFT);
+            Join<JobSeeker, Skill> skillJoin = null;
 
             if (hasKeyword || hasSkills) {
                 skillJoin = root.join("skills", JoinType.LEFT);
             }
 
-            // =========================================
-            // KEYWORD SEARCH (Name + Skill + Company + Location)
-            // =========================================
+            // ===============================
+            // KEYWORD SEARCH
+            // ===============================
             if (hasKeyword) {
 
                 String pattern = "%" + keyword.trim().toLowerCase() + "%";
                 List<Predicate> keywordPredicates = new ArrayList<>();
 
-                // 🔹 Name (User table)
                 keywordPredicates.add(
                         cb.like(cb.lower(userJoin.get("name")), pattern)
                 );
 
-                // 🔹 Skill name
                 if (skillJoin != null) {
                     keywordPredicates.add(
                             cb.like(cb.lower(skillJoin.get("name")), pattern)
                     );
                 }
 
-                // 🔹 Company
                 keywordPredicates.add(
                         cb.like(cb.lower(root.get("currentCompany")), pattern)
                 );
 
-                // 🔹 Current Location
                 keywordPredicates.add(
                         cb.like(cb.lower(root.get("currentLocation")), pattern)
                 );
 
-                predicates.add(
-                        cb.or(keywordPredicates.toArray(new Predicate[0]))
-                );
+                predicates.add(cb.or(keywordPredicates.toArray(new Predicate[0])));
             }
 
-            // =========================================
-            // EXACT SKILL FILTER (Multi Skill IN)
-            // =========================================
+            // ===============================
+            // SKILL FILTER
+            // ===============================
             if (hasSkills && skillJoin != null) {
 
                 List<String> normalizedSkills = skillNames.stream()
@@ -107,30 +105,24 @@ public class JobSeekerSpecification {
                 );
             }
 
-            // =========================================
-            // LOCATION FILTERS
-            // =========================================
+            // ===============================
+            // OTHER FILTERS (unchanged)
+            // ===============================
+
             if (currentLocation != null && !currentLocation.trim().isEmpty()) {
                 predicates.add(
-                        cb.like(
-                                cb.lower(root.get("currentLocation")),
-                                "%" + currentLocation.trim().toLowerCase() + "%"
-                        )
+                        cb.like(cb.lower(root.get("currentLocation")),
+                                "%" + currentLocation.trim().toLowerCase() + "%")
                 );
             }
 
             if (preferredLocation != null && !preferredLocation.trim().isEmpty()) {
                 predicates.add(
-                        cb.like(
-                                cb.lower(root.get("preferredLocation")),
-                                "%" + preferredLocation.trim().toLowerCase() + "%"
-                        )
+                        cb.like(cb.lower(root.get("preferredLocation")),
+                                "%" + preferredLocation.trim().toLowerCase() + "%")
                 );
             }
 
-            // =========================================
-            // EXPERIENCE FILTER
-            // =========================================
             if (minExperience != null) {
                 predicates.add(
                         cb.greaterThanOrEqualTo(root.get("totalExperience"), minExperience)
@@ -143,9 +135,6 @@ public class JobSeekerSpecification {
                 );
             }
 
-            // =========================================
-            // EXPECTED CTC FILTER
-            // =========================================
             if (minExpectedCTC != null) {
                 predicates.add(
                         cb.greaterThanOrEqualTo(root.get("expectedCTC"), minExpectedCTC)
@@ -158,13 +147,8 @@ public class JobSeekerSpecification {
                 );
             }
 
-            // =========================================
-            // NOTICE FILTERS
-            // =========================================
             if (noticeStatus != null) {
-                predicates.add(
-                        cb.equal(root.get("noticeStatus"), noticeStatus)
-                );
+                predicates.add(cb.equal(root.get("noticeStatus"), noticeStatus));
             }
 
             if (maxNoticePeriod != null) {
@@ -188,4 +172,5 @@ public class JobSeekerSpecification {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
 }
