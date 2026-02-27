@@ -223,6 +223,14 @@ public class JobSeekerService {
     }
     
     
+    @Transactional(readOnly = true)
+    public Set<String> getSkillsById(Long userId) {
+        return skillRepository.findSkillNamesByUserId(userId);
+    }
+    
+    
+    
+    
     public PagedResponse<SkillResponseDTO> getAllSkills(
             String keyword,
             Integer page,
@@ -384,6 +392,7 @@ public class JobSeekerService {
 
         return JobSeekerSearchResponse.builder()
                 .id(jobSeeker.getId())
+                .userId(jobSeeker.getUser().getId())
                 .fullName(jobSeeker.getUser().getName())
                 .email(jobSeeker.getUser().getEmail())
                 .currentCompany(jobSeeker.getCurrentCompany())

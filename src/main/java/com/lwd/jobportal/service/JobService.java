@@ -51,6 +51,9 @@ public class JobService {
     }
     
     
+    // ==================================================
+    // CREATE JOB BY RECRUITER
+    // ==================================================
     @Transactional
     public JobResponse createJobAsRecruiter(CreateJobRequest request) {
 
@@ -216,7 +219,7 @@ public class JobService {
     
 
     // ==================================================
-    // READ APIs
+    // GET JOB BY ID
     // ==================================================
     public JobResponse getJobById(Long jobId) {
         return mapToResponse(getJobByIdInternal(jobId));
@@ -239,6 +242,9 @@ public class JobService {
     }
     
 
+    // ==================================================
+    // GET ALL JOBS
+    // ==================================================
     public PagedJobResponse getAllJobs(int page, int size) {
 
         Pageable pageable = PageRequest.of(
@@ -255,7 +261,9 @@ public class JobService {
 
 
 
-    
+    // ==================================================
+    // GET TOP INDUSTRIES
+    // ==================================================
     public List<String> getTopIndustries(int limit) {
 
         Pageable pageable = PageRequest.of(0, limit);
@@ -268,6 +276,9 @@ public class JobService {
 
     
     
+    // ==================================================
+    // GET JOB BY iNDUSTRIES
+    // ==================================================
     public PagedJobResponse getJobsByIndustry(String industry, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
@@ -287,7 +298,8 @@ public class JobService {
                 jobPage.isLast()
                 );
     }
-        
+     
+    
 	 // ==================================================
 	 // SEARCH PUBLIC JOBS
 	 // ==================================================
@@ -336,6 +348,10 @@ public class JobService {
 	 }
 
 
+	 
+	// ==================================================
+	// SUGGESTED JOBS
+	// ==================================================
 
     public PagedJobResponse getSuggestedJobs(Long userId, int page, int size) {
         // 1️⃣ Get last applied job
@@ -370,6 +386,9 @@ public class JobService {
     }
 
 
+    // ==================================================
+    // SIMILAR JOBS
+    // ==================================================
     
     @Transactional(readOnly = true)
     public List<JobResponse> getSimilarJobs(Long jobId) {
@@ -394,6 +413,10 @@ public class JobService {
                 .toList();
     }
 
+    
+    // ==================================================
+    // JOB SEARCH SUGGESTIONS
+    // ==================================================
     public List<String> getSearchSuggestions(String keyword) {
 
         if (keyword == null || keyword.trim().isEmpty()) {
@@ -432,7 +455,9 @@ public class JobService {
     }
 
 
-
+    // ==================================================
+    // TRENDING JOBS
+    // ==================================================
     
     public List<JobResponse> getTrendingJobs() {
 
@@ -447,28 +472,30 @@ public class JobService {
 
 
 
-
-
-
     // ==================================================
     // PRIVATE HELPERS
     // ==================================================
+    
+    //================= GET USER BY ID =================
     private User getUserById(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
+    
+    //================= ADMIN =================
     private Company getCompanyById(Long companyId) {
         return companyRepository.findById(companyId)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
     }
 
+    //================= GET JOB ID =================
     private Job getJobByIdInternal(Long jobId) {
         return jobRepository.findByIdAndDeletedFalse(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
     }
 
-
+    //================= ADMIN =================
     private void validateOwnership(User user, Job job) {
         if (user.getRole() != Role.ADMIN &&
                 !job.getCompany().getCreatedById().equals(user.getId())) {
@@ -478,6 +505,7 @@ public class JobService {
         }
     }
 
+    //================= ADMIN =================
     private Job buildJob(CreateJobRequest request, User creator, Company company) {
         return Job.builder()
                 .title(request.getTitle())

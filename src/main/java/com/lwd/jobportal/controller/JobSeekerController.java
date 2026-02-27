@@ -45,6 +45,12 @@ public class JobSeekerController {
     	return ResponseEntity.ok(jobSeekerService.getMySkills());
     }
     
+    
+    @GetMapping("/skills/{userId}")
+    public ResponseEntity<Set<String>> getSkillsById(@PathVariable Long userId ) {
+    	return ResponseEntity.ok(jobSeekerService.getSkillsById(userId));
+    }
+    
     @PutMapping("/updateskills")
     public ResponseEntity<?> updateMySkills(
             @RequestBody UpdateSkillsRequest request

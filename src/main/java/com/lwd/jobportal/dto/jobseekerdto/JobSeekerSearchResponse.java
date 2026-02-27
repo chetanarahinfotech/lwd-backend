@@ -12,6 +12,7 @@ import java.util.List;
 public class JobSeekerSearchResponse {
 
     private Long id;
+    private Long userId;
 
     private String fullName;              // from User
     private String email;                 // from User
