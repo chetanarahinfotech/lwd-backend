@@ -8,6 +8,10 @@ import org.springframework.web.bind.annotation.*;
 
 import com.lwd.jobportal.dto.jobapplicationdto.PagedApplicationsResponse;
 import com.lwd.jobportal.dto.jobdto.JobSummaryDTO;
+import com.lwd.jobportal.dto.recruiterdto.RecruiterProfileSummaryDTO;
+import com.lwd.jobportal.dto.recruiterdto.RecruiterRequestDTO;
+import com.lwd.jobportal.dto.recruiterdto.RecruiterResponseDTO;
+import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.RecruiterService;
 
 import lombok.RequiredArgsConstructor;
@@ -18,6 +22,47 @@ import lombok.RequiredArgsConstructor;
 public class RecruiterController {
 
     private final RecruiterService recruiterService;
+
+    // =====================================================
+    // CREATE / UPDATE PROFILE
+    // =====================================================
+
+    @PostMapping("/profile")
+    public ResponseEntity<RecruiterResponseDTO> createOrUpdateProfile(
+            @RequestBody RecruiterRequestDTO dto) {
+
+        RecruiterResponseDTO response =
+                recruiterService.createOrUpdateProfile(dto);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // =====================================================
+    // GET LOGGED-IN RECRUITER PROFILE
+    // =====================================================
+
+    @GetMapping("/me")
+    public ResponseEntity<RecruiterResponseDTO> getMyProfile() {
+
+        RecruiterResponseDTO response =
+                recruiterService.getMyProfile();
+
+        return ResponseEntity.ok(response);
+    }
+
+    // =====================================================
+    // GET RECRUITER PROFILE BY USER ID
+    // =====================================================
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<RecruiterResponseDTO> getRecruiterByUserId(
+            @PathVariable Long userId) {
+
+        RecruiterResponseDTO response =
+                recruiterService.getRecruiterByUserId(userId);
+
+        return ResponseEntity.ok(response);
+    }
 
     // ================= GET ALL JOBS POSTED BY LOGGED-IN RECRUITER =================
     @PreAuthorize("hasRole('RECRUITER')")
@@ -50,5 +95,18 @@ public class RecruiterController {
                 recruiterService.getApplicationsForJob(jobId, page, size);
 
         return ResponseEntity.ok(response);
+    }
+    
+    @GetMapping("/{id}/summary")
+    public ResponseEntity<RecruiterProfileSummaryDTO> getRecruiterSummary(@PathVariable Long id) {
+        RecruiterProfileSummaryDTO dto = recruiterService.getRecruiterSummary(id);
+        return ResponseEntity.ok(dto);
+    }
+    
+    @GetMapping("/summary")
+    public ResponseEntity<RecruiterProfileSummaryDTO> getMyRecruiterSummary() {
+    	Long id = SecurityUtils.getUserId();
+        RecruiterProfileSummaryDTO dto = recruiterService.getRecruiterSummary(id);
+        return ResponseEntity.ok(dto);
     }
 }

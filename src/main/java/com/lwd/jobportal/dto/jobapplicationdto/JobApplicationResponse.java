@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import com.lwd.jobportal.dto.companydto.CompanySummaryDTO;
 import com.lwd.jobportal.dto.jobdto.JobSummaryDTO;
+import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSummaryDTO;
 import com.lwd.jobportal.enums.ApplicationSource;
 import com.lwd.jobportal.enums.ApplicationStatus;
 
@@ -20,13 +21,21 @@ public class JobApplicationResponse {
     private String applicantName;
     private String email;
     private String phone;
+    
+    // 🔥 ADD THIS
+    private Long jobSeekerId;
 
     // 🔹 Application info
     private ApplicationSource applicationSource;
     private ApplicationStatus status;
     private LocalDateTime appliedAt;
+    
+    // 🔹 External application link (only if source = EXTERNAL)
+    private String externalApplicationUrl;
 
     // 🔹 Nested minimal objects
     private JobSummaryDTO job;
     private CompanySummaryDTO company;
+    // 🔥 ADD THIS
+    private JobSeekerSummaryDTO jobSeeker;
 }

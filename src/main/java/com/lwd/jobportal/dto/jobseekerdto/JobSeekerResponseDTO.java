@@ -4,6 +4,7 @@ import com.lwd.jobportal.enums.NoticeStatus;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -34,4 +35,7 @@ public class JobSeekerResponseDTO {
     private String preferredLocation;
     private Integer totalExperience;
     private String resumeUrl;
+    
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

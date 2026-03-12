@@ -76,18 +76,4 @@ public class RecruiterAdminController {
         return ResponseEntity.ok(response);
     }
     
- 
-    
-    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
-    @GetMapping("/recruiter/{recruiterId}/jobs")
-    public ResponseEntity<PagedResponse<JobResponse>> getJobsByRecruiter(
-            @PathVariable Long recruiterId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size
-    ) {
-        return ResponseEntity.ok(
-                recruiterAdminService.getJobsByRecruiter(recruiterId, page, size)
-        );
-    }
-
 }

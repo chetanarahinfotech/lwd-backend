@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.lwd.jobportal.dto.companydto.CompanySummaryDTO;
 import com.lwd.jobportal.dto.jobapplicationdto.*;
 import com.lwd.jobportal.dto.jobdto.JobSummaryDTO;
+import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSummaryDTO;
 import com.lwd.jobportal.entity.*;
 import com.lwd.jobportal.enums.*;
 import com.lwd.jobportal.exception.BadRequestException;
@@ -30,9 +31,10 @@ public class JobApplicationService {
     private final JobRepository jobRepository;
     private final UserRepository userRepository;
     private final CompanyRepository companyRepository;
+    private final JobSeekerRepository jobSeekerRepository;
 
     
-    public void applyForJob(JobApplicationRequest request, Long jobSeekerId) {
+    public String applyForJob(JobApplicationRequest request, Long userId) {
 
         Job job = jobRepository.findById(request.getJobId())
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
@@ -41,17 +43,52 @@ public class JobApplicationService {
             throw new BadRequestException("Job is not accepting applications");
         }
 
-        User jobSeeker = userRepository.findById(jobSeekerId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UnauthorizedException("User not found"));
 
-        if (jobApplicationRepository
-                .existsByJobIdAndJobSeekerId(job.getId(), jobSeeker.getId())) {
-            throw new BadRequestException("You have already applied for this job");
+        if (jobApplicationRepository.existsByJobIdAndJobSeekerId(job.getId(), user.getId())) {
+            throw new BadRequestException("You already applied for this job");
         }
 
+        // ================= EXTERNAL JOB =================
+        if (job.getApplicationSource() == ApplicationSource.EXTERNAL) {
+
+            JobSeeker profile = jobSeekerRepository
+                    .findByUserId(userId)
+                    .orElseThrow(() ->
+                            new BadRequestException("Please complete your job seeker profile first"));
+
+            if (user.getPhone() == null || user.getPhone().isBlank()) {
+                throw new BadRequestException("Please add phone number in your profile");
+            }
+
+//            if (profile.getResumeUrl() == null || profile.getResumeUrl().isBlank()) {
+//                throw new BadRequestException("Please upload your resume before applying");
+//            }
+
+            JobApplication application = JobApplication.builder()
+                    .job(job)
+                    .jobSeeker(user)
+                    .applicationSource(ApplicationSource.EXTERNAL)
+                    .fullName(user.getName())
+                    .email(user.getEmail())
+                    .phone(user.getPhone())
+                    .resumeUrl(profile.getResumeUrl())
+                    .externalApplyUrl(job.getExternalApplicationUrl())
+                    .status(ApplicationStatus.APPLIED)
+                    .appliedAt(LocalDateTime.now())
+                    .build();
+
+            jobApplicationRepository.save(application);
+
+            return job.getExternalApplicationUrl();
+        }
+
+
+        // ================= PORTAL JOB =================
         JobApplication application = JobApplication.builder()
                 .job(job)
-                .jobSeeker(jobSeeker)
+                .jobSeeker(user)
                 .applicationSource(ApplicationSource.PORTAL)
                 .fullName(request.getFullName())
                 .email(request.getEmail())
@@ -59,12 +96,17 @@ public class JobApplicationService {
                 .skills(request.getSkills())
                 .coverLetter(request.getCoverLetter())
                 .resumeUrl(request.getResumeUrl())
+                
                 .status(ApplicationStatus.APPLIED)
                 .appliedAt(LocalDateTime.now())
                 .build();
 
         jobApplicationRepository.save(application);
+
+        return "Application submitted successfully";
     }
+
+
     
     
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
@@ -124,7 +166,7 @@ public class JobApplicationService {
             throw new ResourceNotFoundException("Job not found with id: " + jobId);
         }
         Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
-        Page<JobApplication> applications = jobApplicationRepository.findByJobId(jobId, pageable);
+        Page<JobApplication> applications = jobApplicationRepository.findByJob_Id(jobId, pageable);
         return buildPagedResponse(applications);
     }
     
@@ -146,13 +188,6 @@ public class JobApplicationService {
             application.setUpdatedBy(userId); 
             jobApplicationRepository.save(application);
             return;
-        }
-
-        Company company = companyRepository.findByCreatedById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
-
-        if (!company.getId().equals(application.getJob().getCompany().getId())) {
-            throw new AccessDeniedException("You are not allowed to update this application");
         }
 
         application.setStatus(newStatus);
@@ -241,12 +276,32 @@ public class JobApplicationService {
                 .last(page.isLast())
                 .build();
     }
-
+    
+    
     // ================= HELPER: MAP ENTITY → DTO =================
     private JobApplicationResponse mapToResponse(JobApplication application) {
 
         Job job = application.getJob();
         Company company = job.getCompany();
+        User user = application.getJobSeeker();
+        JobSeeker profile = user != null ? user.getJobSeekerProfile() : null;
+
+        JobSeekerSummaryDTO jobSeekerDTO = null;
+
+        if (profile != null) {
+            jobSeekerDTO = JobSeekerSummaryDTO.builder()
+                    .id(user.getId())
+                    .headline(profile.getHeadline())
+                    .totalExperience(profile.getTotalExperience())
+                    .currentCompany(profile.getCurrentCompany())
+                    .currentLocation(profile.getCurrentLocation())
+                    .currentCTC(profile.getCurrentCTC())
+                    .expectedCTC(profile.getExpectedCTC())
+                    .immediateJoiner(profile.getImmediateJoiner())
+                    .noticePeriod(profile.getNoticePeriod())
+                    .resumeUrl(profile.getResumeUrl())
+                    .build();
+        }
 
         return JobApplicationResponse.builder()
                 .applicationId(application.getId())
@@ -254,8 +309,13 @@ public class JobApplicationService {
                 .email(application.getEmail())
                 .phone(application.getPhone())
                 .applicationSource(application.getApplicationSource())
+                .externalApplicationUrl(job.getExternalApplicationUrl())
                 .status(application.getStatus())
                 .appliedAt(application.getAppliedAt())
+
+                .jobSeekerId(user != null ? user.getId() : null)
+                .jobSeeker(jobSeekerDTO)
+
                 .job(JobSummaryDTO.builder()
                         .id(job.getId())
                         .title(job.getTitle())
@@ -266,11 +326,15 @@ public class JobApplicationService {
                         .status(job.getStatus())
                         .createdAt(job.getCreatedAt())
                         .build())
+
                 .company(CompanySummaryDTO.builder()
                         .id(company.getId())
                         .companyName(company.getCompanyName())
                         .logo(company.getLogoUrl())
                         .build())
+
                 .build();
     }
+
+
 }

@@ -33,6 +33,7 @@ public class AdminController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
+    	System.out.println("All Users");
         return ResponseEntity.ok(adminService.getAllUsers(page, size));
     }
 

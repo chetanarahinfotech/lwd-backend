@@ -2,6 +2,7 @@ package com.lwd.jobportal.dto.jobseekerdto;
 
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -30,4 +31,7 @@ public class JobSeekerSearchResponse {
     private Integer noticePeriod;
 
     private List<String> skills;          // only skill names
+    
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

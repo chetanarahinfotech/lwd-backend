@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.lwd.jobportal.dto.companydto.CompanyAnalyticsDTO;
 import com.lwd.jobportal.dto.companydto.CompanyResponse;
 import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
 import com.lwd.jobportal.dto.companydto.PagedCompanyResponse;
@@ -92,6 +93,14 @@ public class CompanyController {
         );
     }
     
+    @GetMapping("/{id}/analytics")
+    public ResponseEntity<CompanyAnalyticsDTO> getAnalytics(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(companyService.getAnalytics(id));
+    }
+
+    
     // ✅ GET ALL COMPANIES (PAGINATED)
     @GetMapping
     public ResponseEntity<PagedCompanyResponse> getAllCompanies(
@@ -100,6 +109,16 @@ public class CompanyController {
         return ResponseEntity.ok(
                 companyService.getAllCompany(pageable)
         );
+    }
+    
+    @GetMapping("/search")
+    public PagedCompanyResponse searchCompanies(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        return companyService.searchCompanies(keyword, page, size);
     }
     
     // ✅ GET BY INDUSTRY (PAGINATED)

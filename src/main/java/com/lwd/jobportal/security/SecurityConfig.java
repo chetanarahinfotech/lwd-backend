@@ -41,10 +41,13 @@ public class SecurityConfig {
 //                    .requestMatchers("/api/companies/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
                     .requestMatchers("/api/companies/**").permitAll()
                     .requestMatchers("/api/recruiter-admin/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
+                    .requestMatchers("/api/recruiter/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN", "RECRUITER")
                     .requestMatchers("/api/job-applications/**").permitAll()
                     
                     .requestMatchers("/api/jobs/**").permitAll()
+                    .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN", "RECRUITER")
                     .requestMatchers("/api/job-seekers/**").permitAll()
+                    .requestMatchers("/api/education/**").permitAll()
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

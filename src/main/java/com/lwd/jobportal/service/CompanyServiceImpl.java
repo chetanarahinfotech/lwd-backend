@@ -1,13 +1,16 @@
 package com.lwd.jobportal.service;
 
-
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.lwd.jobportal.dto.companydto.CompanyAnalyticsDTO;
 import com.lwd.jobportal.dto.companydto.CompanyResponse;
 import com.lwd.jobportal.dto.companydto.CreateCompanyRequest;
 import com.lwd.jobportal.dto.companydto.PagedCompanyResponse;
@@ -23,17 +26,51 @@ import com.lwd.jobportal.security.SecurityUtils;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * ============================================================
+ * CompanyServiceImpl
+ * ============================================================
+ *
+ * Handles all business logic related to Company management.
+ *
+ * Responsibilities:
+ *  - Create company
+ *  - Update company
+ *  - Soft delete company
+ *  - Fetch company details
+ *  - Industry-based filtering
+ *
+ * Security Model:
+ *  - ADMIN: Full access
+ *  - RECRUITER_ADMIN: Can manage only companies they created
+ *  - RECRUITER: Can view assigned company
+ *
+ * All operations are transactional.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class CompanyServiceImpl implements CompanyService {
 
+    // Repository for Company persistence operations
     private final CompanyRepository companyRepository;
+
+    // Repository for User operations (used for recruiter-company mapping)
     private final UserRepository userRepository;
-    
+
+    // ============================================================
+    // ======================= CREATE COMPANY =====================
+    // ============================================================
+
+    /**
+     * Creates a new company.
+     *
+     * Only ADMIN or RECRUITER_ADMIN can create companies.
+     */
     @Override
     public CompanyResponse createCompany(CreateCompanyRequest request) {
 
+        // Role validation
         if (!SecurityUtils.hasRole(Role.ADMIN)
                 && !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
             throw new ForbiddenActionException(
@@ -41,12 +78,15 @@ public class CompanyServiceImpl implements CompanyService {
             );
         }
 
+        // Check duplicate company name
         if (companyRepository.existsByCompanyName(request.getCompanyName())) {
             throw new InvalidOperationException("Company already exists");
         }
 
+        // Get currently logged-in user ID
         Long userId = SecurityUtils.getUserId();
 
+        // Build company entity
         Company company = Company.builder()
                 .companyName(request.getCompanyName())
                 .description(request.getDescription())
@@ -54,17 +94,29 @@ public class CompanyServiceImpl implements CompanyService {
                 .location(request.getLocation())
                 .logoUrl(request.getLogoUrl())
                 .createdById(userId)
-                .isActive(true)
+                .isActive(true) // Default active on creation
                 .build();
 
         return mapToResponse(companyRepository.save(company));
     }
 
+    // ============================================================
+    // ===================== GET MY COMPANY =======================
+    // ============================================================
 
-	@Override
+    /**
+     * Fetch company associated with a given user.
+     *
+     * ADMIN / RECRUITER_ADMIN:
+     *   - Fetch by createdById
+     *
+     * RECRUITER:
+     *   - Fetch assigned company
+     */
+    @Override
     public CompanyResponse getMyCompanyBy(Long userId) {
 
-        // ADMIN / RECRUITER_ADMIN
+        // ADMIN / RECRUITER_ADMIN logic
         if (SecurityUtils.hasRole(Role.ADMIN) ||
             SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
 
@@ -74,7 +126,7 @@ public class CompanyServiceImpl implements CompanyService {
                             new ResourceNotFoundException("Company not found"));
         }
 
-        // RECRUITER
+        // RECRUITER logic
         if (SecurityUtils.hasRole(Role.RECRUITER)) {
 
             User user = userRepository.findById(userId)
@@ -91,19 +143,26 @@ public class CompanyServiceImpl implements CompanyService {
             return mapToResponse(company);
         }
 
-        // Other roles
+        // Other roles not allowed
         throw new ForbiddenActionException("Access Denied");
     }
-    
+
+    // ============================================================
+    // ================= GET COMPANY BY CREATOR ===================
+    // ============================================================
+
+    /**
+     * Fetch company created by a specific user.
+     * Only ADMIN or RECRUITER_ADMIN allowed.
+     */
     @Override
     public CompanyResponse getCompanyByCreatedBy(Long userId) {
-    	
-    	if (!SecurityUtils.hasRole(Role.ADMIN) &&
-    		    !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
 
-    		    throw new ForbiddenActionException("Access Denied");
-    		}
+        if (!SecurityUtils.hasRole(Role.ADMIN) &&
+            !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
 
+            throw new ForbiddenActionException("Access Denied");
+        }
 
         return companyRepository.findByCreatedById(userId)
                 .map(this::mapToResponse)
@@ -114,8 +173,19 @@ public class CompanyServiceImpl implements CompanyService {
                 );
     }
 
+    // ============================================================
+    // ======================= UPDATE COMPANY =====================
+    // ============================================================
 
-
+    /**
+     * Updates an existing company.
+     *
+     * ADMIN:
+     *  - Can update any company.
+     *
+     * RECRUITER_ADMIN:
+     *  - Can update only companies they created.
+     */
     @Override
     public CompanyResponse updateCompany(Long companyId, CreateCompanyRequest request) {
 
@@ -124,6 +194,7 @@ public class CompanyServiceImpl implements CompanyService {
 
         Long userId = SecurityUtils.getUserId();
 
+        // Role validation
         if (!SecurityUtils.hasRole(Role.ADMIN)
                 && !SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
             throw new ForbiddenActionException(
@@ -131,6 +202,7 @@ public class CompanyServiceImpl implements CompanyService {
             );
         }
 
+        // Recruiter Admin ownership validation
         if (SecurityUtils.hasRole(Role.RECRUITER_ADMIN)
                 && !company.getCreatedById().equals(userId)) {
             throw new ForbiddenActionException(
@@ -138,11 +210,13 @@ public class CompanyServiceImpl implements CompanyService {
             );
         }
 
+        // Prevent duplicate company names
         if (!company.getCompanyName().equals(request.getCompanyName())
                 && companyRepository.existsByCompanyName(request.getCompanyName())) {
             throw new InvalidOperationException("Company name already exists");
         }
 
+        // Update fields
         company.setCompanyName(request.getCompanyName());
         company.setDescription(request.getDescription());
         company.setWebsite(request.getWebsite());
@@ -152,7 +226,19 @@ public class CompanyServiceImpl implements CompanyService {
         return mapToResponse(companyRepository.save(company));
     }
 
+    // ============================================================
+    // ======================= DELETE COMPANY =====================
+    // ============================================================
 
+    /**
+     * Soft delete company (sets isActive = false).
+     *
+     * ADMIN:
+     *   - Can delete any company
+     *
+     * RECRUITER_ADMIN:
+     *   - Can delete only companies they created
+     */
     @Override
     public void deleteCompany(Long companyId) {
 
@@ -161,12 +247,14 @@ public class CompanyServiceImpl implements CompanyService {
 
         Long userId = SecurityUtils.getUserId();
 
+        // ADMIN: Full access
         if (SecurityUtils.hasRole(Role.ADMIN)) {
             company.setIsActive(false);
             companyRepository.save(company);
             return;
         }
 
+        // RECRUITER_ADMIN: Ownership check
         if (SecurityUtils.hasRole(Role.RECRUITER_ADMIN)) {
             if (!company.getCreatedById().equals(userId)) {
                 throw new ForbiddenActionException(
@@ -178,12 +266,19 @@ public class CompanyServiceImpl implements CompanyService {
             return;
         }
 
+        // Other roles not allowed
         throw new ForbiddenActionException(
                 "You do not have permission to delete this company"
         );
     }
-    
-    
+
+    // ============================================================
+    // ======================= GET COMPANY ========================
+    // ============================================================
+
+    /**
+     * Fetch company by ID.
+     */
     @Override
     public CompanyResponse getCompanyById(Long companyId) {
 
@@ -193,6 +288,19 @@ public class CompanyServiceImpl implements CompanyService {
         return mapToResponse(company);
     }
     
+    
+    public CompanyAnalyticsDTO getAnalytics(Long companyId) {
+        return companyRepository.getCompanyAnalytics(companyId);
+    }
+
+
+    // ============================================================
+    // ======================= GET ALL COMPANIES ==================
+    // ============================================================
+
+    /**
+     * Fetch all companies with pagination.
+     */
     @Override
     public PagedCompanyResponse getAllCompany(Pageable pageable) {
 
@@ -213,7 +321,13 @@ public class CompanyServiceImpl implements CompanyService {
         );
     }
 
-    
+    // ============================================================
+    // ================== GET COMPANY BY INDUSTRY =================
+    // ============================================================
+
+    /**
+     * Fetch companies filtered by industry.
+     */
     @Override
     public PagedCompanyResponse getCompanyByIndustry(String industry, Pageable pageable) {
 
@@ -234,12 +348,42 @@ public class CompanyServiceImpl implements CompanyService {
                 companyPage.isLast()
         );
     }
-
-
     
-    
+    @Override
+    public PagedCompanyResponse searchCompanies(
+            String keyword,
+            int page,
+            int size
+    ) {
 
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
+        Page<Company> companyPage =
+                companyRepository.searchCompanies(keyword, pageable);
+
+        List<CompanyResponse> companies =
+                companyPage.getContent()
+                        .stream()
+                        .map(this::mapToResponse)
+                        .collect(Collectors.toList());
+
+        return new PagedCompanyResponse(
+                companies,
+                companyPage.getNumber(),
+                companyPage.getSize(),
+                companyPage.getTotalElements(),
+                companyPage.getTotalPages(),
+                companyPage.isLast()
+        );
+    }
+
+    // ============================================================
+    // ======================= MAPPER =============================
+    // ============================================================
+
+    /**
+     * Converts Company entity to CompanyResponse DTO.
+     */
     private CompanyResponse mapToResponse(Company company) {
         return CompanyResponse.builder()
                 .id(company.getId())
@@ -254,6 +398,4 @@ public class CompanyServiceImpl implements CompanyService {
                 .updatedAt(company.getUpdatedAt())
                 .build();
     }
-
-
 }
