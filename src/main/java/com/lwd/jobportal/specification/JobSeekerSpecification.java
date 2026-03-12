@@ -4,12 +4,15 @@ import com.lwd.jobportal.entity.JobSeeker;
 import com.lwd.jobportal.entity.Skill;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.NoticeStatus;
+
 import org.springframework.data.jpa.domain.Specification;
 
 import jakarta.persistence.criteria.*;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class JobSeekerSpecification {
 
@@ -33,144 +36,184 @@ public class JobSeekerSpecification {
         return (root, query, cb) -> {
 
             boolean isCountQuery = query.getResultType() == Long.class;
-
-            boolean hasKeyword = keyword != null && !keyword.trim().isEmpty();
+            boolean hasKeyword = keyword != null && !keyword.isBlank();
             boolean hasSkills = skillNames != null && !skillNames.isEmpty();
-
-            // ===============================
-            // 🔥 FIX N+1 HERE
-            // ===============================
-            if (!isCountQuery) {
-
-                // Fetch user always (needed in DTO)
-                root.fetch("user", JoinType.LEFT);
-
-                // Fetch skills ONLY when filtering by skill or keyword
-                if (hasKeyword || hasSkills) {
-                    root.fetch("skills", JoinType.LEFT);
-                }
-
-                query.distinct(true);
-            }
 
             List<Predicate> predicates = new ArrayList<>();
 
+            query.distinct(true);
+
+            // JOIN USER
             Join<JobSeeker, User> userJoin = root.join("user", JoinType.LEFT);
+
+            // JOIN SKILLS ONLY WHEN NEEDED
             Join<JobSeeker, Skill> skillJoin = null;
 
-            if (hasKeyword || hasSkills) {
+            if (hasSkills) {
                 skillJoin = root.join("skills", JoinType.LEFT);
             }
 
-            // ===============================
+            // =================================
             // KEYWORD SEARCH
-            // ===============================
+            // =================================
+
             if (hasKeyword) {
 
-                String pattern = "%" + keyword.trim().toLowerCase() + "%";
-                List<Predicate> keywordPredicates = new ArrayList<>();
+                String pattern = "%" + keyword.toLowerCase() + "%";
 
-                keywordPredicates.add(
-                        cb.like(cb.lower(userJoin.get("name")), pattern)
+                predicates.add(
+                        cb.or(
+                                cb.like(cb.lower(userJoin.get("name")), pattern),
+                                cb.like(cb.lower(root.get("currentCompany")), pattern),
+                                cb.like(cb.lower(root.get("currentLocation")), pattern),
+                                cb.like(cb.lower(root.get("headline")), pattern)
+                        )
                 );
-
-                if (skillJoin != null) {
-                    keywordPredicates.add(
-                            cb.like(cb.lower(skillJoin.get("name")), pattern)
-                    );
-                }
-
-                keywordPredicates.add(
-                        cb.like(cb.lower(root.get("currentCompany")), pattern)
-                );
-
-                keywordPredicates.add(
-                        cb.like(cb.lower(root.get("currentLocation")), pattern)
-                );
-
-                predicates.add(cb.or(keywordPredicates.toArray(new Predicate[0])));
             }
 
-            // ===============================
+            // =================================
             // SKILL FILTER
-            // ===============================
+            // =================================
+
             if (hasSkills && skillJoin != null) {
 
-                List<String> normalizedSkills = skillNames.stream()
-                        .map(s -> s.toLowerCase().trim())
-                        .toList();
+                List<String> normalizedSkills =
+                        skillNames.stream()
+                                .map(String::toLowerCase)
+                                .collect(Collectors.toList());
 
                 predicates.add(
                         cb.lower(skillJoin.get("name")).in(normalizedSkills)
                 );
             }
 
-            // ===============================
-            // OTHER FILTERS (unchanged)
-            // ===============================
+            // =================================
+            // LOCATION
+            // =================================
 
-            if (currentLocation != null && !currentLocation.trim().isEmpty()) {
+            if (currentLocation != null && !currentLocation.isBlank()) {
+
                 predicates.add(
-                        cb.like(cb.lower(root.get("currentLocation")),
-                                "%" + currentLocation.trim().toLowerCase() + "%")
+                        cb.like(
+                                cb.lower(root.get("currentLocation")),
+                                "%" + currentLocation.toLowerCase() + "%"
+                        )
                 );
             }
 
-            if (preferredLocation != null && !preferredLocation.trim().isEmpty()) {
+            if (preferredLocation != null && !preferredLocation.isBlank()) {
+
                 predicates.add(
-                        cb.like(cb.lower(root.get("preferredLocation")),
-                                "%" + preferredLocation.trim().toLowerCase() + "%")
+                        cb.like(
+                                cb.lower(root.get("preferredLocation")),
+                                "%" + preferredLocation.toLowerCase() + "%"
+                        )
                 );
             }
+
+            // =================================
+            // EXPERIENCE
+            // =================================
 
             if (minExperience != null) {
                 predicates.add(
-                        cb.greaterThanOrEqualTo(root.get("totalExperience"), minExperience)
+                        cb.greaterThanOrEqualTo(
+                                root.get("totalExperience"),
+                                minExperience
+                        )
                 );
             }
 
             if (maxExperience != null) {
                 predicates.add(
-                        cb.lessThanOrEqualTo(root.get("totalExperience"), maxExperience)
+                        cb.lessThanOrEqualTo(
+                                root.get("totalExperience"),
+                                maxExperience
+                        )
                 );
             }
 
+            // =================================
+            // CTC
+            // =================================
+
             if (minExpectedCTC != null) {
+
                 predicates.add(
-                        cb.greaterThanOrEqualTo(root.get("expectedCTC"), minExpectedCTC)
+                        cb.greaterThanOrEqualTo(
+                                root.get("expectedCTC"),
+                                minExpectedCTC
+                        )
                 );
             }
 
             if (maxExpectedCTC != null) {
+
                 predicates.add(
-                        cb.lessThanOrEqualTo(root.get("expectedCTC"), maxExpectedCTC)
+                        cb.lessThanOrEqualTo(
+                                root.get("expectedCTC"),
+                                maxExpectedCTC
+                        )
                 );
             }
 
+            // =================================
+            // NOTICE
+            // =================================
+
             if (noticeStatus != null) {
-                predicates.add(cb.equal(root.get("noticeStatus"), noticeStatus));
+
+                predicates.add(
+                        cb.equal(root.get("noticeStatus"), noticeStatus)
+                );
             }
 
             if (maxNoticePeriod != null) {
+
                 predicates.add(
-                        cb.lessThanOrEqualTo(root.get("noticePeriod"), maxNoticePeriod)
+                        cb.lessThanOrEqualTo(
+                                root.get("noticePeriod"),
+                                maxNoticePeriod
+                        )
                 );
             }
 
             if (immediateJoiner != null) {
+
                 predicates.add(
                         cb.equal(root.get("immediateJoiner"), immediateJoiner)
                 );
             }
 
             if (availableBefore != null) {
+
                 predicates.add(
-                        cb.lessThanOrEqualTo(root.get("availableFrom"), availableBefore)
+                        cb.lessThanOrEqualTo(
+                                root.get("availableFrom"),
+                                availableBefore
+                        )
+                );
+            }
+
+            // =================================
+            // SKILL RANKING
+            // =================================
+
+            if (!isCountQuery && hasSkills && skillJoin != null) {
+
+                query.groupBy(root.get("id"));
+
+                Expression<Long> skillMatchCount =
+                        cb.count(skillJoin.get("id"));
+
+                query.orderBy(
+                        cb.desc(skillMatchCount),
+                        cb.desc(root.get("profileCompletion")),
+                        cb.desc(root.get("totalExperience"))
                 );
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
-
 }

@@ -158,39 +158,7 @@ public class RecruiterAdminService {
     }
     
 
-    public PagedResponse<JobResponse> getJobsByRecruiter(
-            Long recruiterId,
-            int page,
-            int size
-    ) {
-
-        User recruiter = userRepository.findById(recruiterId)
-                .orElseThrow(() -> new ResourceNotFoundException("Recruiter not found"));
-
-        if (recruiter.getRole() != Role.RECRUITER) {
-            throw new IllegalArgumentException("User is not a recruiter");
-        }
-
-        Pageable pageable = PageRequest.of(page, size);
-
-        Page<Job> jobPage = jobRepository
-                .findByCreatedById(recruiterId, pageable);
-
-        List<JobResponse> content = jobPage.getContent()
-                .stream()
-                .map(this::mapToJobResponse)
-                .toList();
-
-        return new PagedResponse<>(
-                content,
-                jobPage.getNumber(),
-                jobPage.getSize(),
-                jobPage.getTotalElements(),
-                jobPage.getTotalPages(),
-                jobPage.isLast()
-        );
-    }
-
+   
 
     // ================= HELPER: MAP USER → DTO =================
     private RecruiterResponse mapToResponse(User user) {
@@ -204,30 +172,5 @@ public class RecruiterAdminService {
                 .build();
     }
     
-    private JobResponse mapToJobResponse(Job job) {
-
-        Company company = job.getCompany();
-
-        return JobResponse.builder()
-                .id(job.getId())
-                .title(job.getTitle())
-                .description(job.getDescription())
-                .location(job.getLocation())
-                .salary(job.getSalary())
-                .status(job.getStatus().name())
-                .industry(job.getIndustry())
-                .createdBy(job.getCreatedBy().getEmail())
-                .minExperience(job.getMinExperience())   // new
-                .maxExperience(job.getMaxExperience())   // new
-                .createdAt(job.getCreatedAt())
-                .jobType(job.getJobType() != null ? job.getJobType().name() : null)  // new
-                .company(
-                        CompanySummaryDTO.builder()
-                                .id(company.getId())
-                                .companyName(company.getCompanyName())
-                                .logo(company.getLogoUrl())
-                                .build()
-                )
-                .build();
-    }
+   
 }

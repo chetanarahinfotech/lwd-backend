@@ -7,7 +7,10 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.lwd.jobportal.entity.Company;
@@ -29,6 +32,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     // Find active users
     List<User> findByIsActiveTrue();
+    
+
+    Optional<User> findByEmailVerificationToken(String token);
 
 	Page<User> findByRoleAndCompany(Role role, Company company, Pageable pageable);
 	
@@ -39,12 +45,97 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	        Pageable pageable
 	);
 	
+	@EntityGraph(attributePaths = {
+	        "company",
+	        "jobSeekerProfile"
+	})
+	Page<User> findAll(Pageable pageable);
+
+	
 	long countByCompanyIdAndRole(Long companyId, Role role);
 	 
 	long countByRole(Role role);
 	long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
-	List<User> findTop5ByOrderByCreatedAtDesc();
 	long countByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
 	List<User> findByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
+	
+	@EntityGraph(attributePaths = {"jobSeekerProfile"})
+	@Query("SELECT u FROM User u WHERE u.role = 'JOB_SEEKER'")
+	Page<User> findJobSeekers(Pageable pageable);
+
+
+	@EntityGraph(attributePaths = {"company"})
+	List<User> findTop5ByOrderByCreatedAtDesc();
+
+	@EntityGraph(attributePaths = {"company"})
+	@Query("SELECT u FROM User u WHERE u.role IN ('RECRUITER','RECRUITER_ADMIN')")
+	Page<User> findRecruiters(Pageable pageable);
+	
+	
+	
+	@Query("""
+			SELECT u FROM User u
+			WHERE u.role = com.lwd.jobportal.enums.Role.JOB_SEEKER
+			AND (
+			    LOWER(u.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+			    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+			    OR u.phone LIKE CONCAT('%', :keyword, '%')
+			)
+			""")
+			Page<User> searchJobSeekers(String keyword, Pageable pageable);
+
+	@Query("""
+			SELECT u FROM User u
+			LEFT JOIN u.company c
+			WHERE (u.role = com.lwd.jobportal.enums.Role.RECRUITER 
+			   OR u.role = com.lwd.jobportal.enums.Role.RECRUITER_ADMIN)
+			AND (
+			    LOWER(u.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+			    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+			    OR u.phone LIKE CONCAT('%', :keyword, '%')
+			    OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+			)
+			""")
+			Page<User> searchRecruiters(String keyword, Pageable pageable);
+
+	@Query("""
+		    SELECT u FROM User u
+		    WHERE u.role = com.lwd.jobportal.enums.Role.JOB_SEEKER
+		    AND (
+		        LOWER(u.name) LIKE LOWER(CONCAT(:keyword, '%'))
+		        OR LOWER(u.email) LIKE LOWER(CONCAT(:keyword, '%'))
+		        OR u.phone LIKE CONCAT(:keyword, '%')
+		    )
+		    ORDER BY u.name ASC
+		""")
+		Page<User> searchJobSeekerSuggestions(
+		        @Param("keyword") String keyword,
+		        Pageable pageable
+		);
+
+	
+	@Query("""
+		    SELECT u FROM User u
+		    LEFT JOIN u.company c
+		    WHERE (
+		        u.role = com.lwd.jobportal.enums.Role.RECRUITER
+		        OR u.role = com.lwd.jobportal.enums.Role.RECRUITER_ADMIN
+		    )
+		    AND (
+		        LOWER(u.name) LIKE LOWER(CONCAT(:keyword, '%'))
+		        OR LOWER(u.email) LIKE LOWER(CONCAT(:keyword, '%'))
+		        OR u.phone LIKE CONCAT(:keyword, '%')
+		        OR LOWER(c.companyName) LIKE LOWER(CONCAT(:keyword, '%'))
+		    )
+		    ORDER BY u.name ASC
+		""")
+		Page<User> searchRecruiterSuggestions(
+		        @Param("keyword") String keyword,
+		        Pageable pageable
+		);
+
+
+
+
 
 }

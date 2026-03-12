@@ -23,7 +23,9 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 	@EntityGraph(attributePaths = {"company"})
 	Page<Job> findByCompanyId(Long companyId, Pageable pageable);
 	
-    List<Job> findByCreatedById(Long userId);
+	@EntityGraph(attributePaths = {"company", "createdBy"})
+	List<Job> findByCreatedById(Long userId);
+	
     Page<Job> findByCreatedById(Long userId, Pageable pageable);
     
     long countByCompanyId(Long companyId);
@@ -35,7 +37,8 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     })
     Optional<Job> findByIdAndDeletedFalse(Long id);
 
-    
+
+    @EntityGraph(attributePaths = {"company"})
     List<Job> findByStatusAndCreatedAtLessThanOrderByCreatedAtDesc(
             JobStatus status,
             LocalDateTime lastSeen,
@@ -58,7 +61,7 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     
     @Query("""
     	    SELECT j FROM Job j
-    	    JOIN j.company c
+    	    JOIN FETCH j.company c
     	    WHERE j.status = 'OPEN'
     	    AND (
     	        LOWER(j.title) LIKE %:keyword%
@@ -67,6 +70,7 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     	    )
     	""")
     	Page<Job> quickSearch(@Param("keyword") String keyword, Pageable pageable);
+
 
     
     @Query("""
@@ -176,12 +180,102 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     @Query("SELECT j FROM Job j WHERE j.expiresAt BETWEEN :now AND :weekLater")
     List<Job> findJobsExpiringSoon(LocalDateTime now, LocalDateTime weekLater);
     
-    @Query("SELECT j FROM Job j WHERE j.id NOT IN (SELECT DISTINCT ja.job.id FROM JobApplication ja)")
-    List<Job> findJobsWithoutApplications();
+    @Query("""
+    		SELECT j
+    		FROM Job j
+    		WHERE NOT EXISTS (
+    		    SELECT 1
+    		    FROM JobApplication ja
+    		    WHERE ja.job = j
+    		)
+    		""")
+    		List<Job> findJobsWithoutApplications();
 
     @Query("SELECT j.industry, COUNT(j) FROM Job j GROUP BY j.industry")
     List<Object[]> countJobsPerIndustry();
 
     long countByCreatedById(Long recruiterId);
+    
+    
+    
+    @Query("""
+    	    SELECT j FROM Job j
+    	    LEFT JOIN j.company c
+    	    WHERE j.deleted = false
+    	    AND (
+    	        LOWER(j.title) LIKE LOWER(CONCAT(:keyword, '%'))
+    	        OR LOWER(c.companyName) LIKE LOWER(CONCAT(:keyword, '%'))
+    	    )
+    	    ORDER BY j.createdAt DESC
+    	""")
+    	Page<Job> searchJobSuggestions(
+    	        @Param("keyword") String keyword,
+    	        Pageable pageable
+    	);
+
+    
+    
+    @Query("""
+    	    SELECT j FROM Job j
+    	    LEFT JOIN j.company c
+    	    WHERE j.deleted = false
+    	    AND (
+    	        :keyword IS NULL
+    	        OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    	        OR LOWER(j.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    	        OR LOWER(j.industry) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    	        OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    	    )
+    	    ORDER BY j.createdAt DESC
+    	""")
+    	Page<Job> searchJobs(
+    	        @Param("keyword") String keyword,
+    	        Pageable pageable
+    	);
+    
+    
+    
+    
+    
+    // ================= ADMIN =================
+    @Query("""
+           SELECT j FROM Job j
+           WHERE (:keyword IS NULL 
+                  OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.industry) LIKE LOWER(CONCAT('%', :keyword, '%')))
+           """)
+    Page<Job> searchAllJobs(@Param("keyword") String keyword, Pageable pageable);
+
+    // ================= RECRUITER_ADMIN =================
+    @Query("""
+           SELECT j FROM Job j
+           WHERE j.company.id = :companyId
+             AND (:keyword IS NULL 
+                  OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.industry) LIKE LOWER(CONCAT('%', :keyword, '%')))
+           """)
+    Page<Job> searchJobsByCompany(@Param("companyId") Long companyId,
+                                  @Param("keyword") String keyword,
+                                  Pageable pageable);
+
+    // ================= RECRUITER =================
+    @Query("""
+           SELECT j FROM Job j
+           WHERE j.createdBy.id = :userId
+             AND (:keyword IS NULL 
+                  OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.description) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                  OR LOWER(j.industry) LIKE LOWER(CONCAT('%', :keyword, '%')))
+           """)
+    Page<Job> searchJobsByCreator(@Param("userId") Long userId,
+                                  @Param("keyword") String keyword,
+                                  Pageable pageable);
+
+
 
 }

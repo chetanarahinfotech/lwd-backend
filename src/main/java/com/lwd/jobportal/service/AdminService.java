@@ -30,23 +30,60 @@ import com.lwd.jobportal.security.SecurityUtils;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+
+/**
+ * ============================================================
+ * AdminService
+ * ============================================================
+ *
+ * This service handles all administrative operations in the system.
+ *
+ * Responsibilities:
+ *  - Manage Users (block/unblock/view)
+ *  - Manage Companies (block/unblock/view)
+ *  - Manage Jobs (close/view)
+ *  - Retrieve Recruiters under a Company
+ *
+ * Security:
+ *  - Only users with ADMIN role are allowed to perform these actions.
+ *
+ * Transactional:
+ *  - All operations are wrapped in a transactional context.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class AdminService {
 
+    // ================= REPOSITORIES =================
+
+    // Repository for User database operations
     private final UserRepository userRepository;
+
+    // Repository for Company database operations
     private final CompanyRepository companyRepository;
+
+    // Repository for Job database operations
     private final JobRepository jobRepository;
 
-    // ================= USERS =================
-    
+    // ============================================================
+    // ========================== USERS ============================
+    // ============================================================
+
+    /**
+     * Fetch paginated list of all users in the system.
+     *
+     * @param page page number (0-based)
+     * @param size number of records per page
+     * @return paginated response containing UserAdminDTO
+     */
     public PagedResponse<UserAdminDTO> getAllUsers(int page, int size) {
-        validateAdminAccess();
+        validateAdminAccess(); // Ensure only ADMIN can access
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
         Page<User> userPage = userRepository.findAll(pageable);
 
+        // Convert User entity to UserAdminDTO
         List<UserAdminDTO> content = userPage.getContent()
                 .stream()
                 .map(this::toUserAdminDTO)
@@ -62,14 +99,17 @@ public class AdminService {
         );
     }
 
-
-
+    /**
+     * Block (suspend) a user.
+     * Changes status to SUSPENDED and disables account.
+     */
     public void blockUser(Long targetUserId) {
         validateAdminAccess();
 
         Long adminId = SecurityUtils.getUserId();
         User user = getUser(targetUserId);
 
+        // Prevent blocking already suspended users
         if (user.getStatus() == UserStatus.SUSPENDED) {
             throw new InvalidOperationException("User is already blocked");
         }
@@ -79,15 +119,20 @@ public class AdminService {
         user.setUpdatedAt(LocalDateTime.now());
 
         userRepository.save(user);
+
+        // Log admin action
         logAction(adminId, "BLOCK_USER", targetUserId);
     }
 
-
+    /**
+     * Unblock (activate) a user.
+     */
     public void unblockUser(Long targetUserId) {
 
         Long adminId = SecurityUtils.getUserId();
-
         User user = getUser(targetUserId);
+
+        // Prevent activating already active users
         if (user.getStatus() == UserStatus.ACTIVE) {
             throw new InvalidOperationException("User is already active");
         }
@@ -96,9 +141,13 @@ public class AdminService {
         user.setIsActive(true);
 
         userRepository.save(user);
+
         logAction(adminId, "UNBLOCK_USER", targetUserId);
     }
-    
+
+    /**
+     * Fetch all recruiters belonging to a specific company.
+     */
     public PagedResponse<RecruiterResponse> getRecruitersByCompanyId(
             Long companyId, int page, int size) {
 
@@ -109,9 +158,11 @@ public class AdminService {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
 
+        // Fetch only users with RECRUITER role for this company
         Page<User> recruiterPage =
                 userRepository.findByRoleAndCompany(Role.RECRUITER, company, pageable);
 
+        // Map to RecruiterResponse DTO
         List<RecruiterResponse> content = recruiterPage.getContent()
                 .stream()
                 .map(user -> RecruiterResponse.builder()
@@ -134,8 +185,13 @@ public class AdminService {
         );
     }
 
-    // ================= COMPANIES =================
+    // ============================================================
+    // ======================== COMPANIES =========================
+    // ============================================================
 
+    /**
+     * Fetch paginated list of all companies with recruiter count and job count.
+     */
     public PagedResponse<CompanyAdminDTO> getAllCompanies(int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
@@ -145,15 +201,18 @@ public class AdminService {
                 .stream()
                 .map(company -> {
 
+                    // Fetch company creator details
                     User creator = userRepository
                             .findById(company.getCreatedById())
                             .orElse(null);
 
+                    // Count recruiters under company
                     long recruiterCount =
                             userRepository.countByCompanyIdAndRole(
                                     company.getId(), Role.RECRUITER
                             );
 
+                    // Count jobs under company
                     long jobCount =
                             jobRepository.countByCompanyId(company.getId());
 
@@ -181,33 +240,43 @@ public class AdminService {
         );
     }
 
-
-    
+    /**
+     * Deactivate (block) a company.
+     */
     public void blockCompany(Long companyId) {
 
         Long adminId = SecurityUtils.getUserId();
-
         Company company = getCompany(companyId);
+
         company.setIsActive(false);
 
         companyRepository.save(company);
+
         logAction(adminId, "BLOCK_COMPANY", companyId);
     }
-    
-    
+
+    /**
+     * Activate (unblock) a company.
+     */
     public void unblockCompany(Long companyId) {
-    	
-    	Long adminId = SecurityUtils.getUserId();
-    	 
+
+        Long adminId = SecurityUtils.getUserId();
         Company company = getCompany(companyId);
+
         company.setIsActive(true);
+
         companyRepository.save(company);
+
         logAction(adminId, "ACTIVE_COMPANY", companyId);
     }
 
+    // ============================================================
+    // =========================== JOBS ===========================
+    // ============================================================
 
-    // ================= JOBS =================
-    
+    /**
+     * Fetch paginated list of all jobs.
+     */
     public PagedResponse<JobAdminDTO> getAllJobs(int page, int size) {
 
         validateAdminAccess();
@@ -235,7 +304,9 @@ public class AdminService {
         );
     }
 
-
+    /**
+     * Close a job (ADMIN action).
+     */
     public void closeJob(Long jobId) {
         validateAdminAccess();
 
@@ -252,9 +323,13 @@ public class AdminService {
         logAction(adminId, "CLOSE_JOB", jobId);
     }
 
+    // ============================================================
+    // ========================== HELPERS =========================
+    // ============================================================
 
-    // ================= HELPERS =================
-    
+    /**
+     * Ensures that only ADMIN users can access protected methods.
+     */
     private void validateAdminAccess() {
         Role role = SecurityUtils.getRole();
         if (role != Role.ADMIN) {
@@ -262,30 +337,43 @@ public class AdminService {
         }
     }
 
-
-
+    /**
+     * Fetch user by ID or throw exception.
+     */
     private User getUser(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
+    /**
+     * Fetch company by ID or throw exception.
+     */
     private Company getCompany(Long id) {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
     }
 
+    /**
+     * Fetch job by ID or throw exception.
+     */
     private Job getJob(Long id) {
         return jobRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
     }
 
+    /**
+     * Logs admin actions.
+     * (In production, this should be stored in an audit table.)
+     */
     private void logAction(Long actorId, String action, Long targetId) {
-        // Optional: save into admin_audit table
         System.out.println(
             "ADMIN " + actorId + " performed " + action + " on " + targetId
         );
     }
-    
+
+    /**
+     * Converts User entity to UserAdminDTO.
+     */
     private UserAdminDTO toUserAdminDTO(User user) {
         return UserAdminDTO.builder()
                 .id(user.getId())
@@ -299,5 +387,4 @@ public class AdminService {
                 .isActive(user.getIsActive())
                 .build();
     }
-
 }

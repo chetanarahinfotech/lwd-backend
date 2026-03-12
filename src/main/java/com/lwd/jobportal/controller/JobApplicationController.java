@@ -2,7 +2,8 @@ package com.lwd.jobportal.controller;
 
 import jakarta.validation.Valid;
 
-import org.springframework.http.HttpStatus;
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -27,15 +28,32 @@ public class JobApplicationController {
     // ================= APPLY FOR JOB =================
     @PreAuthorize("hasRole('JOB_SEEKER')")
     @PostMapping("/apply")
-    public ResponseEntity<String> applyForJob(
-            @Valid @RequestBody JobApplicationRequest request,
-            Authentication authentication
-    ) {
+    public ResponseEntity<?> apply(@RequestBody @Valid JobApplicationRequest request) {
+
         Long jobSeekerId = SecurityUtils.getUserId();
-        jobApplicationService.applyForJob(request, jobSeekerId);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body("Job application submitted successfully");
+
+        String result = jobApplicationService.applyForJob(request, jobSeekerId);
+
+        // If result is URL → external redirect
+        if (result.startsWith("http")) {
+            return ResponseEntity.ok().body(
+                    Map.of(
+                            "type", "EXTERNAL",
+                            "url", result
+                    )
+            );
+        }
+
+        // Portal application success
+        return ResponseEntity.ok().body(
+                Map.of(
+                        "type", "PORTAL",
+                        "message", result
+                )
+        );
     }
+
+
     
     
     @GetMapping("/my-applications")
@@ -45,7 +63,7 @@ public class JobApplicationController {
     ) {
         Long userId = SecurityUtils.getUserId();
         Role role = SecurityUtils.getRole();
-
+        System.out.println("My application role by");
         return ResponseEntity.ok(
                 jobApplicationService.getApplicationsByRole(
                         userId,

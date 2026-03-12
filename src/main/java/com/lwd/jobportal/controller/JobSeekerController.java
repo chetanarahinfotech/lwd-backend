@@ -1,11 +1,15 @@
 package com.lwd.jobportal.controller;
 
 import com.lwd.jobportal.dto.comman.PagedResponse;
+import com.lwd.jobportal.dto.jobseekerdto.AboutInfoDTO;
+import com.lwd.jobportal.dto.jobseekerdto.JobSeekerProfileSummaryResponse;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerRequestDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerResponseDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchRequest;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchResponse;
+import com.lwd.jobportal.dto.jobseekerdto.ProfileCompletionDTO;
 import com.lwd.jobportal.dto.jobseekerdto.SkillResponseDTO;
+import com.lwd.jobportal.dto.jobseekerdto.SocialLinksDTO;
 import com.lwd.jobportal.dto.jobseekerdto.UpdateSkillsRequest;
 import com.lwd.jobportal.service.JobSeekerService;
 
@@ -77,17 +81,104 @@ public class JobSeekerController {
     		@PathVariable Long userId) {
         return jobSeekerService.getJobSeekerByUserId(userId);
     }
+    
+    
+	 // =====================================================
+	 // 🔹 ABOUT PROFILE SECTION
+	 // =====================================================
+	
+    @PutMapping("/me/about")
+    public ResponseEntity<AboutInfoDTO> updateAboutInfo(
+            @RequestBody AboutInfoDTO dto) {
 
-    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER','RECRUITER_ADMIN')")
-    @PostMapping("/search")
-    public ResponseEntity<PagedResponse<JobSeekerSearchResponse>> searchJobSeekers(
-            @RequestBody JobSeekerSearchRequest request
-    ) {
-
-        PagedResponse<JobSeekerSearchResponse> response =
-                jobSeekerService.searchJobSeekers(request);
-
-        return ResponseEntity.ok(response);
+        AboutInfoDTO updated = jobSeekerService.updateAboutInfo(dto);
+        return ResponseEntity.ok(updated);
     }
+
+	
+	
+	 @GetMapping("/me/about")
+	 public ResponseEntity<AboutInfoDTO> getMyAboutInfo() {
+	
+	     return ResponseEntity.ok(
+	             jobSeekerService.getMyAboutInfo());
+	 }
+	 
+	 @GetMapping("/user/{userId}/about")
+	 public ResponseEntity<AboutInfoDTO> getAboutInfoByUserId(
+	         @PathVariable Long userId) {
+	
+	     return ResponseEntity.ok(
+	             jobSeekerService.getAboutInfoByUserId(userId));
+	 }
+	
+	 // =====================================================
+	 // 🔹 SOCIAL LINKS SECTION
+	 // =====================================================
+	
+	 @PutMapping("/me/social")
+	 public ResponseEntity<String> updateSocialLinks(
+	         @RequestBody SocialLinksDTO dto) {
+	
+	     jobSeekerService.updateSocialLinks(dto);
+	     return ResponseEntity.ok("Social links updated successfully");
+	 }
+	
+	 @GetMapping("/me/social")
+	 public ResponseEntity<SocialLinksDTO> getMySocialLinks() {
+	
+	     return ResponseEntity.ok(
+	             jobSeekerService.getMySocialLinks());
+	 }
+	 
+	 @GetMapping("/user/{userId}/social")
+	 public ResponseEntity<SocialLinksDTO> getSocialLinksByUserId(
+	         @PathVariable Long userId) {
+	
+	     return ResponseEntity.ok(
+	             jobSeekerService.getSocialLinksByUserId(userId));
+	 }
+	
+	
+	
+	 // =====================================================
+	 // 🔹 PROFILE SUMMARY
+	 // =====================================================
+	
+	 @GetMapping("/me/summary")
+	 public ResponseEntity<JobSeekerProfileSummaryResponse> getMyProfileSummary() {
+	
+	     return ResponseEntity.ok(
+	             jobSeekerService.getMyProfileSummary());
+	 }
+	 
+	 @GetMapping("/me/profile-completion")
+	 public ResponseEntity<ProfileCompletionDTO> getProfileCompletion() {
+
+	     return ResponseEntity.ok(
+	             jobSeekerService.calculateProfileCompletion()
+	     );
+	 }
+
+
+
+    
+    
+	// =====================================================
+	// 🔹 JOB SEEKERS
+	// =====================================================
+
+	 @PreAuthorize("hasAnyRole('ADMIN','RECRUITER','RECRUITER_ADMIN')")
+	 @PostMapping("/search")
+	 public ResponseEntity<PagedResponse<JobSeekerSearchResponse>> searchJobSeekers(
+	         @RequestBody JobSeekerSearchRequest request
+	 ) {
+
+	     PagedResponse<JobSeekerSearchResponse> response =
+	             jobSeekerService.searchJobSeekers(request);
+
+	     return ResponseEntity.ok(response);
+	 }
+
 
 }

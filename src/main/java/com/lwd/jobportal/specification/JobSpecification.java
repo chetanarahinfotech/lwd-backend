@@ -1,14 +1,13 @@
 package com.lwd.jobportal.specification;
 
 import com.lwd.jobportal.entity.Job;
-import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.entity.JobSeeker;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
 import com.lwd.jobportal.enums.NoticeStatus;
 
 import org.springframework.data.jpa.domain.Specification;
 
-import jakarta.persistence.criteria.Fetch;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -185,12 +184,19 @@ public class JobSpecification {
         };
     }
     
+    
+    
     public static Specification<Job> publicJobs() {
+
         return (root, query, cb) -> {
 
             if (query.getResultType() != Long.class) {
+
                 root.fetch("company", JoinType.LEFT);
-                root.fetch("createdBy", JoinType.LEFT);
+
+                // 🔥 join instead of fetch
+                root.join("createdBy", JoinType.LEFT);
+
                 query.distinct(true);
             }
 
@@ -200,6 +206,9 @@ public class JobSpecification {
             );
         };
     }
+
+    
+    
     
     public static Specification<Job> similarJobs(
             String industry,
@@ -210,15 +219,7 @@ public class JobSpecification {
 
             if (query.getResultType() != Long.class) {
 
-                // Fetch Job → Company
                 root.fetch("company", JoinType.LEFT);
-
-                // Fetch Job → CreatedBy
-                Fetch<Job, User> userFetch =
-                        root.fetch("createdBy", JoinType.LEFT);
-
-                // Fetch CreatedBy → Company (if needed)
-                userFetch.fetch("company", JoinType.LEFT);
 
                 query.distinct(true);
             }
@@ -232,6 +233,65 @@ public class JobSpecification {
             );
         };
     }
+
+    
+    
+    public static Specification<Job> recommendedJobs(JobSeeker seeker) {
+
+        return (root, query, cb) -> {
+
+            boolean isCountQuery = query.getResultType() == Long.class;
+
+            if (!isCountQuery) {
+                root.fetch("company", JoinType.LEFT);
+                root.fetch("skills", JoinType.LEFT);
+                query.distinct(true);
+            }
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            // 🔒 Only active public jobs
+            predicates.add(cb.isFalse(root.get("deleted")));
+            predicates.add(cb.equal(root.get("status"), JobStatus.OPEN));
+
+            // 🔹 Experience Compatibility
+            if (seeker.getTotalExperience() != null) {
+
+                predicates.add(
+                    cb.lessThanOrEqualTo(
+                        root.get("minExperience"),
+                        seeker.getTotalExperience()
+                    )
+                );
+            }
+
+            // 🔹 CTC Compatibility
+            if (seeker.getExpectedCTC() != null) {
+
+                predicates.add(
+                    cb.greaterThanOrEqualTo(
+                        root.get("maxCTC"),
+                        seeker.getExpectedCTC()
+                    )
+                );
+            }
+
+            // 🔹 Location Soft Filter
+            if (seeker.getPreferredLocation() != null &&
+                !seeker.getPreferredLocation().isBlank()) {
+
+                predicates.add(
+                    cb.like(
+                        cb.lower(root.get("location")),
+                        "%" + seeker.getPreferredLocation().toLowerCase() + "%"
+                    )
+                );
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
 
 
 }

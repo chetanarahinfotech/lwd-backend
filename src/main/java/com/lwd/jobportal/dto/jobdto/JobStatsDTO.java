@@ -4,6 +4,8 @@ import lombok.Data;
 
 @Data
 public class JobStatsDTO {
+	
+	private Long jobId;
     private String jobTitle;
     private long applications;
     private long shortlisted;           // status = SHORTLISTED

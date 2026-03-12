@@ -4,6 +4,8 @@ import lombok.Data;
 
 @Data
 public class RecentApplicationDTO {
+	
+	private Long applicationId;
     private String candidateName;     // from JobApplication.fullName or jobSeeker.user.name
     private String jobTitle;
     private String appliedDate;       // appliedAt as string

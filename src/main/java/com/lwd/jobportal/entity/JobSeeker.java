@@ -3,7 +3,12 @@ package com.lwd.jobportal.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
+
+import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import com.lwd.jobportal.enums.NoticeStatus;
 
@@ -17,36 +22,41 @@ import com.lwd.jobportal.enums.NoticeStatus;
 	    },
 	    indexes = {
 
-	        // 🔹 Basic filters
-	        @Index(name = "idx_js_experience", columnList = "total_experience"),
-	        @Index(name = "idx_js_current_location", columnList = "current_location"),
+	    	    @Index(name = "idx_js_experience", columnList = "total_experience"),
+	    	    @Index(name = "idx_js_current_location", columnList = "current_location"),
+	    	    @Index(name = "idx_expected_ctc", columnList = "expected_ctc"),
 
-	        // 🔹 Composite indexes (Most Important)
-	        @Index(
-	            name = "idx_location_experience",
-	            columnList = "current_location, total_experience"
-	        ),
-	        @Index(
-	            name = "idx_experience_ctc",
-	            columnList = "total_experience, expected_ctc"
-	        ),
-	        @Index(
-	            name = "idx_location_experience_ctc",
-	            columnList = "current_location, total_experience, expected_ctc"
-	        ),
+	    	    @Index(
+	    	        name = "idx_location_experience",
+	    	        columnList = "current_location, total_experience"
+	    	    ),
 
-	        // 🔹 Fast joiner search
-	        @Index(
-	            name = "idx_immediate_notice",
-	            columnList = "immediate_joiner, notice_period"
-	        ),
+	    	    @Index(
+	    	        name = "idx_experience_ctc",
+	    	        columnList = "total_experience, expected_ctc"
+	    	    ),
 
-	        // 🔹 Availability filter
-	        @Index(
-	            name = "idx_available_from",
-	            columnList = "available_from"
-	        )
+	    	    @Index(
+	    	        name = "idx_location_experience_ctc",
+	    	        columnList = "current_location, total_experience, expected_ctc"
+	    	    ),
+
+	    	    @Index(
+	    	        name = "idx_immediate_notice",
+	    	        columnList = "immediate_joiner, notice_period"
+	    	    ),
+
+	    	    @Index(
+	    	        name = "idx_available_from",
+	    	        columnList = "available_from"
+	    	    ),
+
+	    	    @Index(
+	    	        name = "idx_notice_status",
+	    	        columnList = "notice_status"
+	    	    )
 	    }
+
 	)
 
 @Getter
@@ -94,6 +104,7 @@ public class JobSeeker {
     private Integer totalExperience;
 
     @ManyToMany(fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @JoinTable(
         name = "job_seeker_skills", // better name now
         joinColumns = @JoinColumn(
@@ -114,9 +125,34 @@ public class JobSeeker {
         }
     )
     private Set<Skill> skills;
+    
+    
+    
+    @Column(length = 150)
+    private String headline;
 
+    @Column(length = 2000)
+    private String about;
+
+    private String linkedinUrl;
+    private String githubUrl;
+    private String portfolioUrl;
+    
+    
+    @Column(name = "profile_completion")
+    private Integer profileCompletion = 0;
 
 
     @Column(length = 1000)
     private String resumeUrl;
+    
+    @CreationTimestamp
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+    
+    
 }

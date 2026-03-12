@@ -2,17 +2,26 @@ package com.lwd.jobportal.service;
 
 import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.comman.PaginationUtil;
+import com.lwd.jobportal.dto.jobseekerdto.AboutInfoDTO;
+import com.lwd.jobportal.dto.jobseekerdto.JobSeekerProfileSummaryResponse;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerRequestDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerResponseDTO;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchRequest;
 import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchResponse;
+import com.lwd.jobportal.dto.jobseekerdto.ProfileCompletionDTO;
 import com.lwd.jobportal.dto.jobseekerdto.SkillResponseDTO;
+import com.lwd.jobportal.dto.jobseekerdto.SocialLinksDTO;
 import com.lwd.jobportal.entity.JobSeeker;
 import com.lwd.jobportal.entity.Skill;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.NoticeStatus;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
+import com.lwd.jobportal.repository.JobSeekerCertificationRepository;
+import com.lwd.jobportal.repository.JobSeekerEducationRepository;
+import com.lwd.jobportal.repository.JobSeekerExperienceRepository;
+import com.lwd.jobportal.repository.JobSeekerInternshipRepository;
+import com.lwd.jobportal.repository.JobSeekerProjectRepository;
 import com.lwd.jobportal.repository.JobSeekerRepository;
 import com.lwd.jobportal.repository.SkillRepository;
 import com.lwd.jobportal.repository.UserRepository;
@@ -46,6 +55,12 @@ public class JobSeekerService {
     private final JobSeekerRepository jobSeekerRepository;
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
+    private final JobSeekerEducationRepository educationRepository;
+    private final JobSeekerExperienceRepository experienceRepository;
+    private final JobSeekerInternshipRepository internshipRepository;
+    private final JobSeekerCertificationRepository certificationRepository;
+    private final JobSeekerProjectRepository projectRepository;
+    
 
 
     // =====================================================
@@ -271,61 +286,367 @@ public class JobSeekerService {
     // ABOUT SECTION
     // =====================================================
     
-    // =====================================================
-    // JOB SEEKER HEADING
-    // =====================================================
+    
+    @Transactional
+    public AboutInfoDTO updateAboutInfo(AboutInfoDTO dto) {
+
+        Long userId = SecurityUtils.getUserId();
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        jobSeeker.setHeadline(dto.getHeadline());
+        jobSeeker.setAbout(dto.getAbout());
+
+        jobSeekerRepository.save(jobSeeker);
+
+        AboutInfoDTO response = new AboutInfoDTO();
+        response.setHeadline(jobSeeker.getHeadline());
+        response.setAbout(jobSeeker.getAbout());
+
+        return response;
+    }
+
+
+    // ===============================
+    // 🔹 Delete Basic Info Section
+    // ===============================
+
+    @Transactional
+    public void deleteBasicProfile() {
+    	
+    	Long userId = SecurityUtils.getUserId();
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        jobSeeker.setHeadline(null);
+        jobSeeker.setAbout(null);
+
+        jobSeekerRepository.save(jobSeeker);
+    }
+
+    // ===============================
+    // 🔹 Update Social Links Section
+    // ===============================
+
+    @Transactional
+    public void updateSocialLinks(SocialLinksDTO dto) {
+    	
+    	Long userId = SecurityUtils.getUserId();
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        jobSeeker.setLinkedinUrl(dto.getLinkedinUrl());
+        jobSeeker.setGithubUrl(dto.getGithubUrl());
+        jobSeeker.setPortfolioUrl(dto.getPortfolioUrl());
+
+        jobSeekerRepository.save(jobSeeker);
+    }
+
+    // ===============================
+    // 🔹 Delete Social Links Section
+    // ===============================
+
+    @Transactional
+    public void deleteSocialLinks() {
+    	
+    	Long userId = SecurityUtils.getUserId();
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        jobSeeker.setLinkedinUrl(null);
+        jobSeeker.setGithubUrl(null);
+        jobSeeker.setPortfolioUrl(null);
+
+        jobSeekerRepository.save(jobSeeker);
+    }
+     
+    
+    
+    @Transactional
+    public ProfileCompletionDTO calculateProfileCompletion() {
+
+        Long userId = SecurityUtils.getUserId();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElse(null);
+
+        if (jobSeeker == null) {
+            return new ProfileCompletionDTO(0, List.of("Create Profile"));
+        }
+
+        int percentage = 0;
+        List<String> missing = new ArrayList<>();
+
+        // 🔹 Headline
+        if (jobSeeker.getHeadline() != null && !jobSeeker.getHeadline().isBlank()) {
+            percentage += 5;
+        } else {
+            missing.add("Add headline");
+        }
+
+        // 🔹 About
+        if (jobSeeker.getAbout() != null && !jobSeeker.getAbout().isBlank()) {
+            percentage += 5;
+        } else {
+            missing.add("Add about section");
+        }
+
+        // 🔹 Location
+        if (jobSeeker.getCurrentLocation() != null && !jobSeeker.getCurrentLocation().isBlank()) {
+            percentage += 5;
+        } else {
+            missing.add("Add location");
+        }
+
+        // 🔹 Skills
+        if (jobSeeker.getSkills() != null && !jobSeeker.getSkills().isEmpty()) {
+            percentage += 15;
+        } else {
+            missing.add("Add skills");
+        }
+
+        // 🔹 Education
+        if (educationRepository.existsByUserId(userId)) {
+            percentage += 15;
+        } else {
+            missing.add("Add education");
+        }
+
+        // 🔹 Experience
+        if (jobSeeker.getTotalExperience() != null) {
+            if (jobSeeker.getTotalExperience() == 0) {
+                percentage += 15;
+            } else if (experienceRepository.existsByUserId(userId)) {
+                percentage += 15;
+            } else {
+                missing.add("Add experience");
+            }
+        } else {
+            missing.add("Add experience");
+        }
+
+        // 🔹 Resume
+        if (jobSeeker.getResumeUrl() != null && !jobSeeker.getResumeUrl().isBlank()) {
+            percentage += 10;
+        } else {
+            missing.add("Upload resume");
+        }
+
+        // 🔹 Notice / Availability
+        if (jobSeeker.getNoticeStatus() != null &&
+            jobSeeker.getNoticePeriod() != null &&
+            jobSeeker.getAvailableFrom() != null) {
+            percentage += 10;
+        } else {
+            missing.add("Add availability details");
+        }
+
+        // 🔹 Expected CTC
+        if (jobSeeker.getExpectedCTC() != null) {
+            percentage += 10;
+        } else {
+            missing.add("Add expected salary");
+        }
+
+        // 🔹 Profile Image
+        if (user.getProfileImageUrl() != null && !user.getProfileImageUrl().isBlank()) {
+            percentage += 10;
+        } else {
+            missing.add("Upload profile photo");
+        }
+
+        // 🔹 Internships
+        if (!internshipRepository.existsByUserId(userId)) {
+            missing.add("Add internships");
+        } else {
+            percentage += 5;
+        }
+
+        // 🔹 Projects
+        if (!projectRepository.existsByUserId(userId)) {
+            missing.add("Add projects");
+        } else {
+            percentage += 5;
+        }
+
+        // 🔹 Certifications
+        if (!certificationRepository.existsByUserId(userId)) {
+            missing.add("Add certifications");
+        } else {
+            percentage += 5;
+        }
+
+        return new ProfileCompletionDTO(percentage, missing);
+    }
+
+
+    
+    @Transactional(readOnly = true)
+    public AboutInfoDTO getMyAboutInfo() {
+
+        Long userId = SecurityUtils.getUserId();
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        AboutInfoDTO dto = new AboutInfoDTO();
+        dto.setHeadline(jobSeeker.getHeadline());
+        dto.setAbout(jobSeeker.getAbout());
+
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public SocialLinksDTO getMySocialLinks() {
+
+        Long userId = SecurityUtils.getUserId();
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        SocialLinksDTO dto = new SocialLinksDTO();
+        dto.setLinkedinUrl(jobSeeker.getLinkedinUrl());
+        dto.setGithubUrl(jobSeeker.getGithubUrl());
+        dto.setPortfolioUrl(jobSeeker.getPortfolioUrl());
+
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public AboutInfoDTO getAboutInfoByUserId(Long userId) {
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        AboutInfoDTO dto = new AboutInfoDTO();
+        dto.setHeadline(jobSeeker.getHeadline());
+        dto.setAbout(jobSeeker.getAbout());
+
+        return dto;
+    }
+
+    
+    @Transactional(readOnly = true)
+    public SocialLinksDTO getSocialLinksByUserId(Long userId) {
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        SocialLinksDTO dto = new SocialLinksDTO();
+        dto.setLinkedinUrl(jobSeeker.getLinkedinUrl());
+        dto.setGithubUrl(jobSeeker.getGithubUrl());
+        dto.setPortfolioUrl(jobSeeker.getPortfolioUrl());
+
+        return dto;
+    }
+
+    @Transactional(readOnly = true)
+    public JobSeekerProfileSummaryResponse getMyProfileSummary() {
+
+        Long userId = SecurityUtils.getUserId();
+
+        JobSeeker jobSeeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Profile not found"));
+
+        JobSeekerProfileSummaryResponse response = new JobSeekerProfileSummaryResponse();
+        response.setHeadline(jobSeeker.getHeadline());
+        response.setAbout(jobSeeker.getAbout());
+        response.setLinkedinUrl(jobSeeker.getLinkedinUrl());
+        response.setGithubUrl(jobSeeker.getGithubUrl());
+        response.setPortfolioUrl(jobSeeker.getPortfolioUrl());
+        response.setProfileCompletion(jobSeeker.getProfileCompletion());
+
+        return response;
+    }
+
+
+
+    
     
     
     // =====================================================
     // SEARCH JOBSEEKERS
     // =====================================================
     
-	public PagedResponse<JobSeekerSearchResponse> searchJobSeekers(
-	        JobSeekerSearchRequest request
-	) {
-	
-	    Specification<JobSeeker> specification =
-	            JobSeekerSpecification.searchJobSeekers(
-	                    request.getKeyword(),
-	                    request.getSkills(),
-	                    request.getCurrentLocation(),
-	                    request.getPreferredLocation(),
-	                    request.getMinExperience(),
-	                    request.getMaxExperience(),
-	                    request.getMinExpectedCTC(),
-	                    request.getMaxExpectedCTC(),
-	                    request.getNoticeStatus(),
-	                    request.getMaxNoticePeriod(),
-	                    request.getImmediateJoiner(),
-	                    request.getAvailableBefore()
-	            );
-	
-	    Sort.Direction direction =
-	            request.getSortDirection() != null
-	                    ? Sort.Direction.fromString(request.getSortDirection())
-	                    : Sort.Direction.DESC;
-	
-	    String sortBy =
-	            request.getSortBy() != null
-	                    ? request.getSortBy()
-	                    : "totalExperience";
-	
-	    Pageable pageable = PageRequest.of(
-	            request.getPage() != null ? request.getPage() : 0,
-	            request.getSize() != null ? request.getSize() : 10,
-	            Sort.by(direction, sortBy)
-	    );
-	
-	    Page<JobSeeker> jobSeekerPage =
-	            jobSeekerRepository.findAll(specification, pageable);
-	
-	    List<JobSeekerSearchResponse> content =
-	            jobSeekerPage.stream()
-	                    .map(this::toSearchResponse)
-	                    .toList();
-	
-	    return PaginationUtil.buildPagedResponse(jobSeekerPage, content);
-	}
+    public PagedResponse<JobSeekerSearchResponse> searchJobSeekers(
+            JobSeekerSearchRequest request
+    ) {
+
+        Specification<JobSeeker> specification =
+                JobSeekerSpecification.searchJobSeekers(
+                        request.getKeyword(),
+                        request.getSkills(),
+                        request.getCurrentLocation(),
+                        request.getPreferredLocation(),
+                        request.getMinExperience(),
+                        request.getMaxExperience(),
+                        request.getMinExpectedCTC(),
+                        request.getMaxExpectedCTC(),
+                        request.getNoticeStatus(),
+                        request.getMaxNoticePeriod(),
+                        request.getImmediateJoiner(),
+                        request.getAvailableBefore()
+                );
+
+        Pageable pageable;
+
+        boolean hasSkills = request.getSkills() != null && !request.getSkills().isEmpty();
+        boolean hasKeyword = request.getKeyword() != null && !request.getKeyword().isBlank();
+
+        if (hasSkills || hasKeyword) {
+
+            pageable = PageRequest.of(
+                    request.getPage() != null ? request.getPage() : 0,
+                    request.getSize() != null ? request.getSize() : 10
+            );
+
+        } else {
+
+            Sort.Direction direction =
+                    request.getSortDirection() != null
+                            ? Sort.Direction.fromString(request.getSortDirection())
+                            : Sort.Direction.DESC;
+
+            String sortBy =
+                    request.getSortBy() != null
+                            ? request.getSortBy()
+                            : "totalExperience";
+
+            pageable = PageRequest.of(
+                    request.getPage() != null ? request.getPage() : 0,
+                    request.getSize() != null ? request.getSize() : 10,
+                    Sort.by(direction, sortBy)
+            );
+        }
+
+        Page<JobSeeker> page =
+                jobSeekerRepository.findAll(specification, pageable);
+
+        List<JobSeekerSearchResponse> content =
+                page.stream()
+                        .map(this::toSearchResponse)
+                        .toList();
+
+        return PaginationUtil.buildPagedResponse(page, content);
+    }
+
 
 
 
@@ -384,31 +705,41 @@ public class JobSeekerService {
                 .preferredLocation(entity.getPreferredLocation())
                 .totalExperience(entity.getTotalExperience())
                 .resumeUrl(entity.getResumeUrl())
+                .createdAt(entity.getCreatedAt())
+                .updatedAt(entity.getUpdatedAt())
                 .build();
     }
     
    
     private JobSeekerSearchResponse toSearchResponse(JobSeeker jobSeeker) {
 
+        // Get user info (already fetched)
+        User user = jobSeeker.getUser();
+
+        // Map skill names (avoid N+1 by using fetched collection)
+        List<String> skillNames = jobSeeker.getSkills() != null
+                ? jobSeeker.getSkills().stream()
+                    .map(skill -> skill.getName())
+                    .toList()
+                : List.of();
+
         return JobSeekerSearchResponse.builder()
                 .id(jobSeeker.getId())
-                .userId(jobSeeker.getUser().getId())
-                .fullName(jobSeeker.getUser().getName())
-                .email(jobSeeker.getUser().getEmail())
+                .userId(user != null ? user.getId() : null)
+                .fullName(user != null ? user.getName() : null)
+                .email(user != null ? user.getEmail() : null)
                 .currentCompany(jobSeeker.getCurrentCompany())
                 .totalExperience(jobSeeker.getTotalExperience())
                 .expectedCTC(jobSeeker.getExpectedCTC())
                 .currentLocation(jobSeeker.getCurrentLocation())
                 .immediateJoiner(jobSeeker.getImmediateJoiner())
                 .noticePeriod(jobSeeker.getNoticePeriod())
-                .skills(
-                        jobSeeker.getSkills()
-                                .stream()
-                                .map(skill -> skill.getName())
-                                .collect(Collectors.toList())
-                )
+                .skills(skillNames)
+                .createdAt(jobSeeker.getCreatedAt())
+                .updatedAt(jobSeeker.getUpdatedAt())
                 .build();
     }
+
 
 
 }

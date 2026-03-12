@@ -16,6 +16,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.NamedAttributeNode;
+import jakarta.persistence.NamedEntityGraph;
+import jakarta.persistence.NamedSubgraph;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -61,6 +64,22 @@ import lombok.NoArgsConstructor;
         )
     }
 )
+@NamedEntityGraph(
+	    name = "JobApplication.full",
+	    attributeNodes = {
+	        @NamedAttributeNode(value = "job", subgraph = "job-subgraph"),
+	        @NamedAttributeNode("jobSeeker")
+	    },
+	    subgraphs = {
+	        @NamedSubgraph(
+	            name = "job-subgraph",
+	            attributeNodes = {
+	                @NamedAttributeNode("company")
+	            }
+	        )
+	    }
+	)
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

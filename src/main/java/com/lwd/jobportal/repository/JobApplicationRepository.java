@@ -6,8 +6,10 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.lwd.jobportal.entity.JobApplication;
@@ -20,7 +22,7 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     boolean existsByJobIdAndJobSeekerId(Long jobId, Long jobSeekerId);
 
     // 🔹 Recruiter / Company Admin: applications for a job (paginated)
-    Page<JobApplication> findByJobId(Long jobId, Pageable pageable);
+//    Page<JobApplication> findByJobId(Long jobId, Pageable pageable);
     
     Page<JobApplication> findByJobIdAndJobCompanyId(
             Long jobId,
@@ -28,22 +30,80 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             Pageable pageable
     );
     
+    
+    @EntityGraph(attributePaths = {
+            "job",
+            "job.company",
+            "jobSeeker",
+            "jobSeeker.jobSeekerProfile"
+    })
+    Page<JobApplication> findByJob_Id(Long jobId, Pageable pageable);
+    
+    
+    @Query("""
+    	    SELECT ja.status, COUNT(ja)
+    	    FROM JobApplication ja
+    	    WHERE ja.job.id = :jobId
+    	    GROUP BY ja.status
+    	""")
+    	List<Object[]> countApplicationsByStatus(Long jobId);
+    
     // ADMIN → all applications
-    Page<JobApplication> findAll(Pageable pageable);
+    @EntityGraph(attributePaths = {
+    	        "job",
+    	        "job.company",
+    	        "jobSeeker",
+    	        "jobSeeker.jobSeekerProfile"
+    	})
+    	Page<JobApplication> findAll(Pageable pageable);
 
     // RECRUITER_ADMIN → company jobs
+    @EntityGraph(attributePaths = {
+            "job",
+            "job.company",
+            "jobSeeker",
+            "jobSeeker.jobSeekerProfile"
+    })
     Page<JobApplication> findByJobCompanyId(Long companyId, Pageable pageable);
 
     // RECRUITER → only jobs created by this recruiter
+    @EntityGraph(attributePaths = {
+            "job",
+            "job.company",
+            "jobSeeker",
+            "jobSeeker.jobSeekerProfile"
+    })
     Page<JobApplication> findByJobCreatedById(Long userId, Pageable pageable);
 
     // 🔹 Job Seeker: my applications (paginated)
+    @EntityGraph(attributePaths = {
+            "job",
+            "job.company",
+            "jobSeeker",
+            "jobSeeker.jobSeekerProfile"
+    })
     Page<JobApplication> findByJobSeekerId(Long jobSeekerId, Pageable pageable);
+    
+    @Query("""
+    	    SELECT ja FROM JobApplication ja
+    	    JOIN FETCH ja.jobSeeker
+    	    WHERE ja.job.id = :jobId
+    	""")
+    	Page<JobApplication> findByJobIdWithJobSeeker(
+    	        @Param("jobId") Long jobId,
+    	        Pageable pageable
+    	);
+
 
     // 🔹 Admin: filter by status (paginated)
     Page<JobApplication> findByStatus(ApplicationStatus status, Pageable pageable);
 
     // 🔹 Recruiter: job + status filter (paginated)
+    @EntityGraph(attributePaths = {
+            "job",
+            "job.company",
+            "jobSeeker"
+    })
     Page<JobApplication> findByJobIdAndStatus(
             Long jobId,
             ApplicationStatus status,
@@ -62,6 +122,16 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             ApplicationStatus status,
             Pageable pageable
     );
+    
+    
+    
+    @Query("""
+    	    SELECT ja.job.id, COUNT(ja)
+    	    FROM JobApplication ja
+    	    WHERE ja.job.id IN :jobIds
+    	    GROUP BY ja.job.id
+    	""")
+    	List<Object[]> countApplicationsForJobs(List<Long> jobIds);
     
     long countByAppliedAtBetween(LocalDateTime start, LocalDateTime end);
     long countByJobCompanyId(Long companyId);

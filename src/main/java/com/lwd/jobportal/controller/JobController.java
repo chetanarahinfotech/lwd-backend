@@ -10,7 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.jobdto.CreateJobRequest;
+import com.lwd.jobportal.dto.jobdto.JobAnalyticsResponse;
 import com.lwd.jobportal.dto.jobdto.JobResponse;
 import com.lwd.jobportal.dto.jobdto.PagedJobResponse;
 import com.lwd.jobportal.enums.JobStatus;
@@ -25,7 +27,6 @@ import com.lwd.jobportal.service.JobService;
 public class JobController {
 
     private final JobService jobService;
-    
     
     // ==================================================
     // CREATE JOB (ADMIN)
@@ -106,6 +107,29 @@ public class JobController {
     ) {
         return ResponseEntity.ok(jobService.getMyJobs(page));
     }
+    
+    
+    @GetMapping("/my-jobs-by-roll")
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    public PagedJobResponse getSearchJobsByRole(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) String keyword
+    ) {
+        return jobService.searchJobsByRole(keyword, page);
+    }
+    
+    
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
+    @GetMapping("/{recruiterId}/jobs")
+    public ResponseEntity<PagedResponse<JobResponse>> getJobsByRecruiter(
+            @PathVariable Long recruiterId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(
+        		jobService.getJobsByRecruiter(recruiterId, page, size)
+        );
+    }
 
     
     // ==================================================
@@ -119,6 +143,14 @@ public class JobController {
                 jobService.getJobById(jobId)
         );
     }
+    
+    @GetMapping("/{jobId}/analytics")
+    public ResponseEntity<JobAnalyticsResponse> getJobAnalytics(
+            @PathVariable Long jobId) {
+
+        return ResponseEntity.ok(jobService.getJobAnalytics(jobId));
+    }
+
 
     // ==================================================
     // GET JOBS BY COMPANY (PUBLIC)
@@ -141,6 +173,7 @@ public class JobController {
 	         @RequestParam(defaultValue = "0") int page,
 	         @RequestParam(defaultValue = "12") int size
 	 ) {
+		 System.out.println("Get all Jobs");
 	     return ResponseEntity.ok(
 	             jobService.getAllJobs(page, size)
 	     );
@@ -154,6 +187,7 @@ public class JobController {
     public ResponseEntity<List<String>> getTopCategories(
             @RequestParam(defaultValue = "12") int limit
     ) {
+    	System.out.println("Top Categaries");
         return ResponseEntity.ok(
                 jobService.getTopIndustries(limit)
         );
@@ -169,6 +203,7 @@ public class JobController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size
     ) {
+    	System.out.println("Industry");
         return ResponseEntity.ok(jobService.getJobsByIndustry(industry, page, size));
     }
 
@@ -192,6 +227,7 @@ public class JobController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
+    	System.out.println("Search jobs");
         return ResponseEntity.ok(
                 jobService.searchPublicJobs(
                         keyword,
@@ -250,6 +286,15 @@ public class JobController {
         );
     }
 
+    
+    @GetMapping("/recommended")
+    public PagedResponse<JobResponse> getRecommendedJobs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+
+        return jobService.getRecommendedJobs(page, size);
+    }
 
 
 

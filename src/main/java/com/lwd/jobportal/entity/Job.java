@@ -6,6 +6,7 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
+import com.lwd.jobportal.enums.ApplicationSource;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
 import com.lwd.jobportal.enums.NoticeStatus;
@@ -36,7 +37,13 @@ import com.lwd.jobportal.enums.NoticeStatus;
 	        // LWD SPECIFIC 
 	    	@Index(name = "idx_jobs_notice_preference", columnList = "notice_preference"),
 	    	@Index(name = "idx_jobs_max_notice_period", columnList = "max_notice_period"),
-	    	@Index(name = "idx_jobs_lwd_preferred", columnList = "lwd_preferred")
+	    	@Index(name = "idx_jobs_lwd_preferred", columnList = "lwd_preferred"),
+	    	@Index(name = "idx_jobs_role_category", columnList = "role_category"),
+	    	@Index(name = "idx_jobs_department", columnList = "department"),
+	    	@Index(name = "idx_jobs_workplace_type", columnList = "workplace_type"),
+	    	@Index(name = "idx_jobs_min_salary", columnList = "min_salary"),
+	    	@Index(name = "idx_jobs_max_salary", columnList = "max_salary")
+
 
 	    }
 	)
@@ -63,8 +70,53 @@ public class Job {
     @Column
     private String industry;
 
+ // ================= SALARY =================
+
+    @Column(name = "min_salary")
+    private Double minSalary;
+
+    @Column(name = "max_salary")
+    private Double maxSalary;
+
+
+    // ================= JOB CLASSIFICATION =================
+
+    @Column(name = "role_category")
+    private String roleCategory;
+
     @Column
-    private Double salary;
+    private String department;
+
+    @Column(name = "workplace_type")
+    private String workplaceType;
+
+
+    // ================= CANDIDATE DETAILS =================
+
+    @Column
+    private String education;
+
+    @Column(columnDefinition = "TEXT")
+    private String skills;
+
+    @Column(name = "gender_preference")
+    private String genderPreference;
+
+    @Column(name = "age_limit")
+    private Integer ageLimit;
+
+
+    // ================= JOB CONTENT =================
+
+    @Column(columnDefinition = "TEXT")
+    private String responsibilities;
+
+    @Column(columnDefinition = "TEXT")
+    private String requirements;
+
+    @Column(columnDefinition = "TEXT")
+    private String benefits;
+
 
     // ================= JOB TYPE =================
     @Enumerated(EnumType.STRING)
@@ -83,9 +135,18 @@ public class Job {
     // ================= STATUS =================
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private JobStatus status;
+    private JobStatus status; // OPEN CLOSE
     
- // ================= LWD SPECIFIC =================
+    // Allowed sources at job posting time
+    @Enumerated(EnumType.STRING)
+    @Column(name = "application_source", nullable = false)
+    private ApplicationSource applicationSource;  // PORTEL, EXTERNAL
+
+    @Column(name = "external_application_url", columnDefinition = "TEXT")
+    private String externalApplicationUrl; // Only required if EXTERNAL
+
+    
+    // ================= LWD SPECIFIC =================
 
     @Enumerated(EnumType.STRING)
     @Column(name = "notice_preference")
@@ -143,9 +204,8 @@ public class Job {
         if (status == null) status = JobStatus.OPEN;
         if (minExperience == null) minExperience = 0;
         
-        if (viewCount == null) {
-            viewCount = 0L;
-        }
+        if (viewCount == null) viewCount = 0L;
+        if (applicationSource == null) applicationSource = ApplicationSource.PORTAL;
     }
     
 
