@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserActivityService userActivityService;
 
     // ✅ Update logged-in or admin-managed user profile
     public UserResponse updateUser(Long userId, UpdateUserRequest request) {
@@ -24,14 +25,17 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        if (request.getName() != null)
+        if (request.getName() != null) {
             user.setName(request.getName());
+        }
 
-        if (request.getPhone() != null)
+        if (request.getPhone() != null) {
             user.setPhone(request.getPhone());
+        }
 
-        if (request.getIsActive() != null)
+        if (request.getIsActive() != null) {
             user.setIsActive(request.getIsActive());
+        }
 
         return mapToResponse(user);
     }
@@ -45,18 +49,29 @@ public class UserService {
         return mapToResponse(user);
     }
 
+    // ✅ Convert Entity → DTO
     private UserResponse mapToResponse(User user) {
+
+        boolean active = userActivityService.isUserActive(user.getId());
+
         return UserResponse.builder()
                 .id(user.getId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .role(user.getRole())
                 .phone(user.getPhone())
-                .isActive(user.getIsActive())
+                .isActive(active) // realtime active status
+                .lastActiveAt(user.getLastActiveAt())
                 .createdAt(user.getCreatedAt())
                 .updatedAt(user.getUpdatedAt())
-                .companyName(user.getCompany() != null ? user.getCompany().getCompanyName() : "")
+                .companyName(
+                        user.getCompany() != null ?
+                                user.getCompany().getCompanyName() : null
+                )
+                .companyId(
+                        user.getCompany() != null ?
+                                user.getCompany().getId() : null
+                )
                 .build();
     }
 }
-	

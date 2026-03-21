@@ -18,6 +18,8 @@ import com.lwd.jobportal.dto.jobdto.PagedJobResponse;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
 import com.lwd.jobportal.enums.NoticeStatus;
+import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.pricing.annotation.RequiresFeature;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.JobService;
 
@@ -50,6 +52,10 @@ public class JobController {
     // ==================================================
     @PreAuthorize("hasAnyRole('RECRUITER','RECRUITER_ADMIN')")
     @PostMapping("/create")
+    @RequiresFeature(
+    	    value = "POST_JOB",
+    	    roles = { Role.RECRUITER } // only recruiters can post jobs
+    	)
     public ResponseEntity<JobResponse> createJobAsRecruiter(
             @Valid @RequestBody CreateJobRequest request
     ) {

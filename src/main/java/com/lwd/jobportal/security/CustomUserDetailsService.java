@@ -1,9 +1,8 @@
 package com.lwd.jobportal.security;
 
-import java.util.List;
 
 import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -37,7 +36,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
         // ❌ Locked by admin
         if (user.isLocked()) {
-            throw new org.springframework.security.authentication.LockedException(
+            throw new LockedException(
                     "Account is locked by administrator"
             );
         }

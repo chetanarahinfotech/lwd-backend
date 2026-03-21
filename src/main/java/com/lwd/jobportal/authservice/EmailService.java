@@ -47,6 +47,9 @@ public class EmailService {
 
         mailSender.send(message);
     }
+    
+    
+    
 
     /**
      * Optional: Generic method to send any email

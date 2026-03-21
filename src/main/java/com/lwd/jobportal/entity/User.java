@@ -60,6 +60,7 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private Role role;
@@ -73,15 +74,13 @@ public class User {
     @Column(nullable = false)
     private Boolean isActive = true;
     
+    private LocalDateTime lastActiveAt;
+    
     @Column(nullable = false)
     private boolean locked = false;
     
     @Column(nullable = false)
     private boolean emailVerified = false;
-
-    private String emailVerificationToken;
-
-    private LocalDateTime tokenExpiry;
 
     
     @ManyToOne

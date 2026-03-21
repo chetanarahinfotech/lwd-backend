@@ -371,9 +371,7 @@ public class JobSeekerService {
     
     
     @Transactional
-    public ProfileCompletionDTO calculateProfileCompletion() {
-
-        Long userId = SecurityUtils.getUserId();
+    public ProfileCompletionDTO calculateProfileCompletion(Long userId) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));

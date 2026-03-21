@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.*;
 import com.lwd.jobportal.dto.userdto.UpdateUserRequest;
 import com.lwd.jobportal.dto.userdto.UserResponse;
 import com.lwd.jobportal.security.SecurityUtils;
+import com.lwd.jobportal.service.UserActivityService;
 import com.lwd.jobportal.service.UserService;
 
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 public class UserController {
 
     private final UserService userService;
+    private final UserActivityService userActivityService;
 
   
     @GetMapping("/me")
@@ -49,6 +51,18 @@ public class UserController {
                 userService.updateUser(userId, request)
         );
     }
+    
+    @GetMapping("/{userId}/active")
+    public boolean isUserActive(@PathVariable Long userId) {
+        return userActivityService.isUserActive(userId);
+    }
+    
+    @GetMapping("/active")
+    public boolean isMeActive() {
+    	Long userId = SecurityUtils.getUserId();
+        return userActivityService.isUserActive(userId);
+    }
+
     
    
 }

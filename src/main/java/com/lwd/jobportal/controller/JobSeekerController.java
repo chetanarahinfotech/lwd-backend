@@ -11,6 +11,7 @@ import com.lwd.jobportal.dto.jobseekerdto.ProfileCompletionDTO;
 import com.lwd.jobportal.dto.jobseekerdto.SkillResponseDTO;
 import com.lwd.jobportal.dto.jobseekerdto.SocialLinksDTO;
 import com.lwd.jobportal.dto.jobseekerdto.UpdateSkillsRequest;
+import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.JobSeekerService;
 
 import lombok.RequiredArgsConstructor;
@@ -154,9 +155,22 @@ public class JobSeekerController {
 	 
 	 @GetMapping("/me/profile-completion")
 	 public ResponseEntity<ProfileCompletionDTO> getProfileCompletion() {
+		 
+		 Long userId = SecurityUtils.getUserId();
 
 	     return ResponseEntity.ok(
-	             jobSeekerService.calculateProfileCompletion()
+	             jobSeekerService.calculateProfileCompletion(userId)
+	     );
+	 }
+
+	 
+	 @GetMapping("/{userId}/profile-completion")
+	 public ResponseEntity<ProfileCompletionDTO> getProfileCompletionByUserId(
+			 @PathVariable Long userId
+			 ) {
+
+	     return ResponseEntity.ok(
+	             jobSeekerService.calculateProfileCompletion(userId)
 	     );
 	 }
 

@@ -34,8 +34,9 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/register/**", "/api/auth/login/**").permitAll()
+                    .requestMatchers("/api/auth/register/**", "/api/auth/login/**", "/api/password/**").permitAll()
                     .requestMatchers("/api/super-admin/**").hasRole("SUPER_ADMIN")
+                    .requestMatchers("/api/email/**").hasRole("SUPER_ADMIN")
                     .requestMatchers("/api/users/**").authenticated()
                     .requestMatchers("/api/admin/**").hasRole("ADMIN")
 //                    .requestMatchers("/api/companies/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN")
@@ -45,6 +46,8 @@ public class SecurityConfig {
                     .requestMatchers("/api/job-applications/**").permitAll()
                     
                     .requestMatchers("/api/jobs/**").permitAll()
+                    .requestMatchers("/api/plans/**").permitAll()
+                    .requestMatchers("/api/plan/**").permitAll()
                     .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN", "RECRUITER")
                     .requestMatchers("/api/job-seekers/**").permitAll()
                     .requestMatchers("/api/education/**").permitAll()

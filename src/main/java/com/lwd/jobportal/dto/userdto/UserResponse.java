@@ -16,6 +16,7 @@ public class UserResponse {
     private Role role;
     private String phone;
     private Boolean isActive;
+    private LocalDateTime lastActiveAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt; 
     private String companyName;
