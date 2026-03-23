@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -20,7 +21,7 @@ import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
 
     // Find user by email (Login)
     Optional<User> findByEmail(String email);
@@ -58,11 +59,19 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	        Pageable pageable
 	);
 	
-	@EntityGraph(attributePaths = {
+	 @Override
+	    @EntityGraph(attributePaths = {
 	        "company",
 	        "jobSeekerProfile"
-	})
-	Page<User> findAll(Pageable pageable);
+	    })
+	    Page<User> findAll(org.springframework.data.jpa.domain.Specification<User> spec, Pageable pageable);
+
+	    @Override
+	    @EntityGraph(attributePaths = {
+	        "company",
+	        "jobSeekerProfile"
+	    })
+	    Page<User> findAll(Pageable pageable);
 
 	
 	long countByCompanyIdAndRole(Long companyId, Role role);

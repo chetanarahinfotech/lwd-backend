@@ -20,7 +20,7 @@ public class PasswordController {
 
     // Forgot password
     @PostMapping("/forgot")
-    public ResponseEntity<String> forgotPassword(@RequestParam ForgotPasswordRequestDTO email) {
+    public ResponseEntity<String> forgotPassword(@RequestBody ForgotPasswordRequestDTO email) {
 
         boolean sent = service.sendResetLink(email);
 

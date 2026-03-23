@@ -19,6 +19,7 @@ import com.lwd.jobportal.exception.BadRequestException;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.exception.UnauthorizedException;
 import com.lwd.jobportal.repository.*;
+import com.lwd.jobportal.specification.JobApplicationSpecification;
 
 import lombok.RequiredArgsConstructor;
 
@@ -152,6 +153,30 @@ public class JobApplicationService {
         else {
             throw new AccessDeniedException("Invalid role");
         }
+
+        return buildPagedResponse(applications);
+    }
+    
+    
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    @Transactional(readOnly = true)
+    public PagedApplicationsResponse searchApplications(
+            Long userId,
+            Role role,
+            ApplicationSearchRequest request,
+            int page,
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(
+                page,
+                size,
+                Sort.by("appliedAt").descending()
+        );
+
+        Page<JobApplication> applications = jobApplicationRepository.findAll(
+                JobApplicationSpecification.searchApplications(userId, role, request),
+                pageable
+        );
 
         return buildPagedResponse(applications);
     }

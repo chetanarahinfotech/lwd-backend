@@ -14,6 +14,7 @@ import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.jobdto.CreateJobRequest;
 import com.lwd.jobportal.dto.jobdto.JobAnalyticsResponse;
 import com.lwd.jobportal.dto.jobdto.JobResponse;
+import com.lwd.jobportal.dto.jobdto.JobSearchRequest;
 import com.lwd.jobportal.dto.jobdto.PagedJobResponse;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
@@ -124,6 +125,14 @@ public class JobController {
         return jobService.searchJobsByRole(keyword, page);
     }
     
+    @PostMapping("/my-jobs-by-role/search")
+    @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
+    public PagedJobResponse searchJobsByRole(
+            @RequestBody JobSearchRequest request,
+            @RequestParam(defaultValue = "0") int page
+    ) {
+        return jobService.searchJobsByRole(request, page);
+    }
     
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN')")
     @GetMapping("/{recruiterId}/jobs")

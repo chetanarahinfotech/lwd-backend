@@ -316,6 +316,34 @@ public class JobService {
 
         return toPagedResponse(jobPage);
     }
+    
+    @Transactional(readOnly = true)
+    public PagedJobResponse searchJobsByRole(JobSearchRequest request, int page) {
+
+        Long userId = SecurityUtils.getUserId();
+        Role role = SecurityUtils.getRole();
+
+        Pageable pageable = PageRequest.of(
+                page,
+                12,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Long companyId = null;
+
+        if (role == Role.RECRUITER_ADMIN) {
+            Company company = companyRepository.findByCreatedById(userId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Company not found"));
+            companyId = company.getId();
+        }
+
+        Page<Job> jobPage = jobRepository.findAll(
+                JobSpecification.searchJobsByRole(userId, companyId, role, request),
+                pageable
+        );
+
+        return toPagedResponse(jobPage.map(job -> mapToResponse(job, Map.of())));
+    }
 
     
 

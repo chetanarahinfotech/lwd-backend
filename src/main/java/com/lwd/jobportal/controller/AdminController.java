@@ -6,6 +6,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.lwd.jobportal.dto.admin.CompanyAdminDTO;
 import com.lwd.jobportal.dto.admin.JobAdminDTO;
 import com.lwd.jobportal.dto.admin.UserAdminDTO;
+import com.lwd.jobportal.dto.admin.UserSearchRequest;
 import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.service.AdminService;
@@ -35,6 +38,15 @@ public class AdminController {
     ) {
     	System.out.println("All Users");
         return ResponseEntity.ok(adminService.getAllUsers(page, size));
+    }
+    
+    @PostMapping("/users/search")
+    public ResponseEntity<PagedResponse<UserAdminDTO>> searchUsers(
+            @RequestBody UserSearchRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ResponseEntity.ok(adminService.searchUsers(request, page, size));
     }
 
 

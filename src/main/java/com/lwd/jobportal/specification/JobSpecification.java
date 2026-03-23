@@ -1,10 +1,14 @@
 package com.lwd.jobportal.specification;
 
+import com.lwd.jobportal.dto.jobdto.JobSearchRequest;
+import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.JobSeeker;
+import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
 import com.lwd.jobportal.enums.NoticeStatus;
+import com.lwd.jobportal.enums.Role;
 
 import org.springframework.data.jpa.domain.Specification;
 
@@ -292,6 +296,110 @@ public class JobSpecification {
         };
     }
 
+    public static Specification<Job> searchJobsByRole(
+            Long userId,
+            Long companyId,
+            Role role,
+            JobSearchRequest request
+    ) {
+        return (root, query, cb) -> {
+
+            query.distinct(true);
+
+            Join<Job, Company> companyJoin = root.join("company", JoinType.LEFT);
+            Join<Job, User> createdByJoin = root.join("createdBy", JoinType.LEFT);
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            // ================= BASE =================
+            predicates.add(cb.isFalse(root.get("deleted")));
+
+            // ================= ROLE SCOPE =================
+            if (role == Role.ADMIN) {
+                // no restriction
+            } 
+            else if (role == Role.RECRUITER_ADMIN) {
+                predicates.add(cb.equal(companyJoin.get("id"), companyId));
+            } 
+            else if (role == Role.RECRUITER) {
+                predicates.add(cb.equal(createdByJoin.get("id"), userId));
+            } 
+            else {
+                predicates.add(cb.disjunction());
+            }
+
+            // ================= KEYWORD =================
+            if (request.getKeyword() != null && !request.getKeyword().isBlank()) {
+
+                String keyword = "%" + request.getKeyword().trim().toLowerCase() + "%";
+
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("title")), keyword),
+                        cb.like(cb.lower(root.get("description")), keyword),
+                        cb.like(cb.lower(root.get("location")), keyword),
+                        cb.like(cb.lower(root.get("industry")), keyword),
+                        cb.like(cb.lower(root.get("skills")), keyword),
+                        cb.like(cb.lower(companyJoin.get("companyName")), keyword)
+                ));
+            }
+
+            // ================= FILTERS =================
+
+            if (request.getLocation() != null && !request.getLocation().isBlank()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("location")),
+                        "%" + request.getLocation().toLowerCase() + "%"
+                ));
+            }
+
+            if (request.getIndustry() != null && !request.getIndustry().isBlank()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("industry")),
+                        "%" + request.getIndustry().toLowerCase() + "%"
+                ));
+            }
+
+            if (request.getSkills() != null && !request.getSkills().isBlank()) {
+                predicates.add(cb.like(
+                        cb.lower(root.get("skills")),
+                        "%" + request.getSkills().toLowerCase() + "%"
+                ));
+            }
+
+            // ENUMS
+            if (request.getJobType() != null) {
+                predicates.add(cb.equal(root.get("jobType"), request.getJobType()));
+            }
+
+            if (request.getStatus() != null) {
+                predicates.add(cb.equal(root.get("status"), request.getStatus()));
+            }
+
+            if (request.getApplicationSource() != null) {
+                predicates.add(cb.equal(root.get("applicationSource"), request.getApplicationSource()));
+            }
+
+            // EXPERIENCE
+            if (request.getMinExperience() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("minExperience"), request.getMinExperience()));
+            }
+
+            if (request.getMaxExperience() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("maxExperience"), request.getMaxExperience()));
+            }
+
+            // SALARY
+            if (request.getMinSalary() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("minSalary"), request.getMinSalary()));
+            }
+
+            if (request.getMaxSalary() != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("maxSalary"), request.getMaxSalary()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
 
 
 }

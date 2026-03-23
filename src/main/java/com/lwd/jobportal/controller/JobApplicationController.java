@@ -74,6 +74,21 @@ public class JobApplicationController {
         );
     }
     
+    
+    @PostMapping("/search")
+    public ResponseEntity<PagedApplicationsResponse> searchApplications(
+            @RequestBody ApplicationSearchRequest request,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Long userId = SecurityUtils.getUserId();
+        Role role = SecurityUtils.getRole();
+
+        return ResponseEntity.ok(
+                jobApplicationService.searchApplications(userId, role, request, page, size)
+        );
+    }
+    
 
 
     // ================= ADMIN ENDPOINTS =================

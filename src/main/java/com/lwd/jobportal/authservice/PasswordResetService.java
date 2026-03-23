@@ -35,7 +35,7 @@ public class PasswordResetService {
         String token = PasswordResetTokenUtil.generateToken(request.getEmail());
 
         String resetUrl =
-                "http://localhost:3000/reset-password?token=" + token;
+                "http://localhost:5173/reset-password?token=" + token;
 
         String body = """
                 Click the link below to reset your password:

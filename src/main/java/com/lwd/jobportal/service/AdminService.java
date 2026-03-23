@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.dto.admin.CompanyAdminDTO;
 import com.lwd.jobportal.dto.admin.JobAdminDTO;
 import com.lwd.jobportal.dto.admin.UserAdminDTO;
+import com.lwd.jobportal.dto.admin.UserSearchRequest;
 import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.entity.Company;
@@ -27,6 +28,7 @@ import com.lwd.jobportal.repository.CompanyRepository;
 import com.lwd.jobportal.repository.JobRepository;
 import com.lwd.jobportal.repository.UserRepository;
 import com.lwd.jobportal.security.SecurityUtils;
+import com.lwd.jobportal.specification.UserSpecification;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -84,6 +86,31 @@ public class AdminService {
         Page<User> userPage = userRepository.findAll(pageable);
 
         // Convert User entity to UserAdminDTO
+        List<UserAdminDTO> content = userPage.getContent()
+                .stream()
+                .map(this::toUserAdminDTO)
+                .toList();
+
+        return new PagedResponse<>(
+                content,
+                userPage.getNumber(),
+                userPage.getSize(),
+                userPage.getTotalElements(),
+                userPage.getTotalPages(),
+                userPage.isLast()
+        );
+    }
+    
+    public PagedResponse<UserAdminDTO> searchUsers(UserSearchRequest request, int page, int size) {
+        validateAdminAccess();
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
+
+        Page<User> userPage = userRepository.findAll(
+                UserSpecification.searchUsers(request),
+                pageable
+        );
+
         List<UserAdminDTO> content = userPage.getContent()
                 .stream()
                 .map(this::toUserAdminDTO)
