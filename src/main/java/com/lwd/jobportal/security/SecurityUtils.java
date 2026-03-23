@@ -1,5 +1,6 @@
 package com.lwd.jobportal.security;
 
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -14,7 +15,9 @@ public class SecurityUtils {
                 .getContext()
                 .getAuthentication();
 
-        if (auth == null || !auth.isAuthenticated()) {
+        if (auth == null || !auth.isAuthenticated()
+                || auth instanceof AnonymousAuthenticationToken
+                || "anonymousUser".equals(String.valueOf(auth.getPrincipal()))) {
             throw new RuntimeException("User not authenticated");
         }
 
@@ -41,6 +44,18 @@ public class SecurityUtils {
             return Long.parseLong(str);
         }
 
+     // ✅ Case 3: Numeric String only
+        if (principal instanceof String str) {
+            if ("anonymousUser".equals(str)) {
+                throw new RuntimeException("User not authenticated");
+            }
+
+            try {
+                return Long.parseLong(str);
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Invalid principal. Expected userId but got: " + str);
+            }
+        }
         throw new RuntimeException("Invalid principal type: " + principal);
     }
 

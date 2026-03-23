@@ -4,6 +4,7 @@ import com.lwd.jobportal.dto.jobdto.JobSearchRequest;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.JobSeeker;
+import com.lwd.jobportal.entity.Skill;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
@@ -241,53 +242,97 @@ public class JobSpecification {
     
     
     public static Specification<Job> recommendedJobs(JobSeeker seeker) {
-
         return (root, query, cb) -> {
 
             boolean isCountQuery = query.getResultType() == Long.class;
 
-            if (!isCountQuery) {
-                root.fetch("company", JoinType.LEFT);
-                root.fetch("skills", JoinType.LEFT);
-                query.distinct(true);
-            }
+//            if (!isCountQuery) {
+//                root.fetch("company", JoinType.LEFT);
+//                query.distinct(true);
+//            }
 
             List<Predicate> predicates = new ArrayList<>();
 
-            // 🔒 Only active public jobs
+            // ✅ Only active public jobs
             predicates.add(cb.isFalse(root.get("deleted")));
             predicates.add(cb.equal(root.get("status"), JobStatus.OPEN));
 
-            // 🔹 Experience Compatibility
+            // ✅ Experience match
             if (seeker.getTotalExperience() != null) {
-
                 predicates.add(
                     cb.lessThanOrEqualTo(
                         root.get("minExperience"),
                         seeker.getTotalExperience()
                     )
                 );
-            }
-
-            // 🔹 CTC Compatibility
-            if (seeker.getExpectedCTC() != null) {
 
                 predicates.add(
-                    cb.greaterThanOrEqualTo(
-                        root.get("maxCTC"),
-                        seeker.getExpectedCTC()
+                    cb.or(
+                        cb.isNull(root.get("maxExperience")),
+                        cb.greaterThanOrEqualTo(
+                            root.get("maxExperience"),
+                            seeker.getTotalExperience()
+                        )
                     )
                 );
             }
 
-            // 🔹 Location Soft Filter
-            if (seeker.getPreferredLocation() != null &&
-                !seeker.getPreferredLocation().isBlank()) {
-
+            // ✅ Salary / CTC match
+            if (seeker.getExpectedCTC() != null) {
                 predicates.add(
-                    cb.like(
-                        cb.lower(root.get("location")),
-                        "%" + seeker.getPreferredLocation().toLowerCase() + "%"
+                    cb.or(
+                        cb.isNull(root.get("maxSalary")),
+                        cb.greaterThanOrEqualTo(
+                            root.get("maxSalary"),
+                            seeker.getExpectedCTC()
+                        )
+                    )
+                );
+            }
+
+            // ✅ Preferred location
+//            if (seeker.getPreferredLocation() != null &&
+//                !seeker.getPreferredLocation().isBlank()) {
+//
+//                predicates.add(
+//                    cb.like(
+//                        cb.lower(root.get("location")),
+//                        "%" + seeker.getPreferredLocation().trim().toLowerCase() + "%"
+//                    )
+//                );
+//            }
+
+            // ✅ Skills match
+//            if (seeker.getSkills() != null && !seeker.getSkills().isEmpty()) {
+//                Predicate skillsPredicate = cb.disjunction();
+//
+//                for (Skill skill : seeker.getSkills()) {
+//                    if (skill != null &&
+//                        skill.getName() != null &&
+//                        !skill.getName().isBlank()) {
+//
+//                        skillsPredicate = cb.or(
+//                            skillsPredicate,
+//                            cb.like(
+//                                cb.lower(root.get("skills")),
+//                                "%" + skill.getName().trim().toLowerCase() + "%"
+//                            )
+//                        );
+//                    }
+//                }
+//
+//                predicates.add(skillsPredicate);
+//            }
+
+            // ✅ Notice period compatibility
+            if (seeker.getNoticePeriod() != null) {
+                predicates.add(
+                    cb.or(
+                        cb.isNull(root.get("maxNoticePeriod")),
+                        cb.greaterThanOrEqualTo(
+                            root.get("maxNoticePeriod"),
+                            seeker.getNoticePeriod()
+                        )
                     )
                 );
             }
