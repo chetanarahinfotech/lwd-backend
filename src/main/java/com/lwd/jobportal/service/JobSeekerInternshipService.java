@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.dto.Internship.InternshipDTO;
 import com.lwd.jobportal.entity.JobSeekerInternship;
 import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerInternshipRepository;
 import com.lwd.jobportal.repository.UserRepository;
 
@@ -24,7 +25,7 @@ public class JobSeekerInternshipService {
     public InternshipDTO createInternship(Long userId, InternshipDTO dto) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         JobSeekerInternship internship = JobSeekerInternship.builder()
                 .user(user)
@@ -48,7 +49,7 @@ public class JobSeekerInternshipService {
     public InternshipDTO updateInternship(Long id, InternshipDTO dto) {
 
         JobSeekerInternship existing = internshipRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Internship not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Internship not found"));
 
         existing.setCompanyName(dto.getCompanyName());
         existing.setRole(dto.getRole());

@@ -10,11 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.lwd.jobportal.dto.comman.PagedResponse;
-import com.lwd.jobportal.dto.companydto.CompanySummaryDTO;
-import com.lwd.jobportal.dto.jobdto.JobResponse;
 import com.lwd.jobportal.dto.recruiteradmindto.RecruiterResponse;
 import com.lwd.jobportal.entity.Company;
-import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;

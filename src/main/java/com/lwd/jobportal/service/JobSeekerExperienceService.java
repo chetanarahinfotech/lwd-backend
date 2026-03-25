@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.dto.experience.ExperienceDTO;
 import com.lwd.jobportal.entity.JobSeekerExperience;
 import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerExperienceRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -61,7 +62,7 @@ public class JobSeekerExperienceService {
 
         JobSeekerExperience experience = experienceRepository
                 .findById(experienceId)
-                .orElseThrow(() -> new RuntimeException("Experience not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Experience not found"));
 
         experience.setCompanyName(dto.getCompanyName());
         experience.setJobTitle(dto.getJobTitle());

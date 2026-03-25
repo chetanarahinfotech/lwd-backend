@@ -1,10 +1,24 @@
-HELP.md
+# =========================
+# BUILD FILES
+# =========================
 target/
-.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+build/
+*.log
 
-### STS ###
+# Maven Wrapper
+.mvn/wrapper/maven-wrapper.jar
+
+# =========================
+# IDE FILES
+# =========================
+
+# IntelliJ
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# STS / Eclipse
 .apt_generated
 .classpath
 .factorypath
@@ -13,21 +27,43 @@ target/
 .springBeans
 .sts4-cache
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
+# NetBeans
 /nbproject/private/
 /nbbuild/
 /dist/
 /nbdist/
 /.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
 
-### VS Code ###
+# VS Code
 .vscode/
+
+# =========================
+# OS FILES
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# ENV / SECRETS (VERY IMPORTANT)
+# =========================
+.env
+.env.*
+application-*.yml
+application-*.yaml
+
+# =========================
+# LOGS
+# =========================
+logs/
+*.log
+
+# =========================
+# DOCKER
+# =========================
+docker-data/
+mysql_data/
+
+# =========================
+# TEST OUTPUT
+# =========================
+coverage/

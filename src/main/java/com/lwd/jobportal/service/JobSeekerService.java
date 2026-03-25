@@ -168,7 +168,7 @@ public class JobSeekerService {
     	 
     	 JobSeeker jobSeeker = jobSeekerRepository
     	            .findByUserId(userId)   // ✅ correct method
-    	            .orElseThrow(() -> new RuntimeException("Profile not found"));
+    	            .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         // Clear skills if empty
         if (skillNames == null || skillNames.isEmpty()) {
@@ -294,7 +294,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         jobSeeker.setHeadline(dto.getHeadline());
         jobSeeker.setAbout(dto.getAbout());
@@ -320,7 +320,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         jobSeeker.setHeadline(null);
         jobSeeker.setAbout(null);
@@ -339,7 +339,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         jobSeeker.setLinkedinUrl(dto.getLinkedinUrl());
         jobSeeker.setGithubUrl(dto.getGithubUrl());
@@ -359,7 +359,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         jobSeeker.setLinkedinUrl(null);
         jobSeeker.setGithubUrl(null);
@@ -374,7 +374,7 @@ public class JobSeekerService {
     public ProfileCompletionDTO calculateProfileCompletion(Long userId) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
@@ -498,7 +498,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         AboutInfoDTO dto = new AboutInfoDTO();
         dto.setHeadline(jobSeeker.getHeadline());
@@ -514,7 +514,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         SocialLinksDTO dto = new SocialLinksDTO();
         dto.setLinkedinUrl(jobSeeker.getLinkedinUrl());
@@ -529,7 +529,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         AboutInfoDTO dto = new AboutInfoDTO();
         dto.setHeadline(jobSeeker.getHeadline());
@@ -544,7 +544,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         SocialLinksDTO dto = new SocialLinksDTO();
         dto.setLinkedinUrl(jobSeeker.getLinkedinUrl());
@@ -561,7 +561,7 @@ public class JobSeekerService {
 
         JobSeeker jobSeeker = jobSeekerRepository
                 .findByUserId(userId)
-                .orElseThrow(() -> new RuntimeException("Profile not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
         JobSeekerProfileSummaryResponse response = new JobSeekerProfileSummaryResponse();
         response.setHeadline(jobSeeker.getHeadline());

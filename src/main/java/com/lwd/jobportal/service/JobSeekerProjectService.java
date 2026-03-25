@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.dto.project.ProjectDTO;
 import com.lwd.jobportal.entity.JobSeekerProject;
 import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerProjectRepository;
 import com.lwd.jobportal.repository.UserRepository;
 
@@ -23,7 +24,7 @@ public class JobSeekerProjectService {
     public ProjectDTO createProject(Long userId, ProjectDTO dto) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         JobSeekerProject project = JobSeekerProject.builder()
                 .user(user)
@@ -47,7 +48,7 @@ public class JobSeekerProjectService {
     public ProjectDTO updateProject(Long id, ProjectDTO dto) {
 
         JobSeekerProject existing = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
 
         existing.setProjectTitle(dto.getProjectTitle());
         existing.setDescription(dto.getDescription());

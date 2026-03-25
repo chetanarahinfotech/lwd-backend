@@ -52,7 +52,7 @@ public class PasswordResetService {
         return true;
     }
 
-    // Reset password
+ // ================= RESET PASSWORD =================
     public boolean resetPassword(ResetPasswordRequestDTO request) {
 
         try {
@@ -66,6 +66,11 @@ public class PasswordResetService {
 
             User user = userOpt.get();
 
+            // ❗ Prevent same password reuse
+            if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+                throw new IllegalArgumentException("New password cannot be same as old password");
+            }
+
             user.setPassword(
                     passwordEncoder.encode(request.getNewPassword())
             );
@@ -75,13 +80,12 @@ public class PasswordResetService {
             return true;
 
         } catch (Exception ex) {
-
             return false;
         }
     }
 
 
-    // Change password
+    // ================= CHANGE PASSWORD =================
     public boolean changePassword(ChangePasswordRequestDTO request) {
 
         Optional<User> userOpt = userRepository.findByEmail(request.getEmail());
@@ -90,8 +94,14 @@ public class PasswordResetService {
 
         User user = userOpt.get();
 
+        // ❗ Check old password is correct
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword()))
             return false;
+
+        // ❗ Prevent same password reuse
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new IllegalArgumentException("New password cannot be same as old password");
+        }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
 

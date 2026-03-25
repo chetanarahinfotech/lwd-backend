@@ -31,15 +31,18 @@ public class AuthService {
 
     // ================= REGISTER JOB SEEKER =================
     public User registerJobSeeker(RegisterRequest request) {
+        validateRegisterRequest(request);
 
-        validateEmail(request.getEmail());
+        String email = normalizeEmail(request.getEmail());
+
+        validateEmailNotExists(email);
 
         User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
+                .name(request.getName().trim())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.JOB_SEEKER)
-                .phone(request.getContactNumber())
+                .phone(request.getContactNumber().trim())
                 .status(UserStatus.ACTIVE)
                 .locked(false)
                 .isActive(true)
@@ -50,16 +53,19 @@ public class AuthService {
 
     // ================= REGISTER RECRUITER =================
     public User registerRecruiter(RegisterRequest request) {
+        validateRegisterRequest(request);
 
-        validateEmail(request.getEmail());
+        String email = normalizeEmail(request.getEmail());
+
+        validateEmailNotExists(email);
 
         User user = User.builder()
-                .name(request.getName())
-                .email(request.getEmail())
+                .name(request.getName().trim())
+                .email(email)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(Role.RECRUITER)
-                .phone(request.getContactNumber())
-                .status(UserStatus.PENDING_APPROVAL) // Needs approval
+                .phone(request.getContactNumber().trim())
+                .status(UserStatus.PENDING_APPROVAL)
                 .locked(false)
                 .isActive(true)
                 .build();
@@ -67,13 +73,21 @@ public class AuthService {
         return userRepository.save(user);
     }
 
- // ================= LOGIN =================
+    // ================= LOGIN =================
     public String login(String email, String password) {
+        String normalizedEmail = normalizeEmail(email);
+
+        if (normalizedEmail == null || normalizedEmail.isBlank()) {
+            throw new BadCredentialsException("Email is required");
+        }
+
+        if (password == null || password.isBlank()) {
+            throw new BadCredentialsException("Password is required");
+        }
 
         try {
-
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(email, password)
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, password)
             );
 
         } catch (LockedException e) {
@@ -84,7 +98,7 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        User user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() ->
                         new BadCredentialsException("Invalid email or password")
                 );
@@ -96,10 +110,36 @@ public class AuthService {
         );
     }
 
-    // ================= HELPER METHOD =================
-    private void validateEmail(String email) {
+    // ================= HELPER METHODS =================
+    private void validateRegisterRequest(RegisterRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Request cannot be null");
+        }
+
+        if (request.getName() == null || request.getName().trim().isBlank()) {
+            throw new IllegalArgumentException("Name is required");
+        }
+
+        if (request.getEmail() == null || request.getEmail().trim().isBlank()) {
+            throw new IllegalArgumentException("Email is required");
+        }
+
+        if (request.getPassword() == null || request.getPassword().isBlank()) {
+            throw new IllegalArgumentException("Password is required");
+        }
+
+        if (request.getContactNumber() == null || request.getContactNumber().trim().isBlank()) {
+            throw new IllegalArgumentException("Contact number is required");
+        }
+    }
+
+    private void validateEmailNotExists(String email) {
         if (userRepository.existsByEmail(email)) {
             throw new UserAlreadyExistsException("Email already registered");
         }
+    }
+
+    private String normalizeEmail(String email) {
+        return email == null ? null : email.trim().toLowerCase();
     }
 }

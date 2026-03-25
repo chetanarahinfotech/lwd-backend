@@ -6,35 +6,58 @@ import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import com.lwd.jobportal.dto.jobapplicationdto.*;
+import com.lwd.jobportal.dto.jobapplicationdto.ApplicationSearchRequest;
+import com.lwd.jobportal.dto.jobapplicationdto.JobApplicationRequest;
+import com.lwd.jobportal.dto.jobapplicationdto.PagedApplicationsResponse;
 import com.lwd.jobportal.enums.ApplicationStatus;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.service.JobApplicationService;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.Parameters;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/job-applications")
 @RequiredArgsConstructor
+@Tag(name = "Job Applications", description = "Job application management APIs")
 public class JobApplicationController {
 
     private final JobApplicationService jobApplicationService;
-    
-    
-    // ================= APPLY FOR JOB =================
+
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Apply for job",
+            description = "Apply for a job as a job seeker. Returns portal success response or external redirect URL."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Application processed successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid application request"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Only job seekers can apply")
+    })
     @PreAuthorize("hasRole('JOB_SEEKER')")
     @PostMapping("/apply")
-    public ResponseEntity<?> apply(@RequestBody @Valid JobApplicationRequest request) {
+    public ResponseEntity<?> apply(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Job application request",
+                    required = true
+            )
+            @RequestBody @Valid JobApplicationRequest request) {
 
         Long jobSeekerId = SecurityUtils.getUserId();
 
         String result = jobApplicationService.applyForJob(request, jobSeekerId);
 
-        // If result is URL → external redirect
         if (result.startsWith("http")) {
             return ResponseEntity.ok().body(
                     Map.of(
@@ -44,7 +67,6 @@ public class JobApplicationController {
             );
         }
 
-        // Portal application success
         return ResponseEntity.ok().body(
                 Map.of(
                         "type", "PORTAL",
@@ -53,9 +75,19 @@ public class JobApplicationController {
         );
     }
 
-
-    
-    
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Get applications by logged-in user role",
+            description = "Fetch paginated applications for the logged-in user based on their role."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Applications fetched successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @Parameters({
+            @Parameter(name = "page", description = "Page number (default = 0)"),
+            @Parameter(name = "size", description = "Page size (default = 10)")
+    })
     @GetMapping("/my-applications")
     public ResponseEntity<PagedApplicationsResponse> getApplicationsByRole(
             @RequestParam(defaultValue = "0") int page,
@@ -63,7 +95,7 @@ public class JobApplicationController {
     ) {
         Long userId = SecurityUtils.getUserId();
         Role role = SecurityUtils.getRole();
-        System.out.println("My application role by");
+
         return ResponseEntity.ok(
                 jobApplicationService.getApplicationsByRole(
                         userId,
@@ -73,10 +105,27 @@ public class JobApplicationController {
                 )
         );
     }
-    
-    
+
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Search applications",
+            description = "Search job applications for the logged-in user based on their role and provided filters."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Applications searched successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid search request"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized")
+    })
+    @Parameters({
+            @Parameter(name = "page", description = "Page number (default = 0)"),
+            @Parameter(name = "size", description = "Page size (default = 10)")
+    })
     @PostMapping("/search")
     public ResponseEntity<PagedApplicationsResponse> searchApplications(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(
+                    description = "Application search request",
+                    required = true
+            )
             @RequestBody ApplicationSearchRequest request,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
@@ -88,10 +137,22 @@ public class JobApplicationController {
                 jobApplicationService.searchApplications(userId, role, request, page, size)
         );
     }
-    
 
-
-    // ================= ADMIN ENDPOINTS =================
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Get applications by job ID",
+            description = "Fetch paginated applications for a specific job."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Applications fetched successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "404", description = "Job not found")
+    })
+    @Parameters({
+            @Parameter(name = "jobId", description = "Job ID"),
+            @Parameter(name = "page", description = "Page number (default = 0)"),
+            @Parameter(name = "size", description = "Page size (default = 10)")
+    })
     @GetMapping("/job/{jobId}")
     public ResponseEntity<PagedApplicationsResponse> getApplicationsByJobId(
             @PathVariable Long jobId,
@@ -103,12 +164,25 @@ public class JobApplicationController {
         return ResponseEntity.ok(response);
     }
 
-    
-    // ================= CHANGE STATUS =================
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Change application status",
+            description = "Change job application status. Accessible to ADMIN, RECRUITER_ADMIN, and RECRUITER."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Application status updated successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid status"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "404", description = "Application not found")
+    })
     @PreAuthorize("hasAnyRole('ADMIN','RECRUITER_ADMIN','RECRUITER')")
     @PutMapping("/{id}/status")
     public ResponseEntity<Void> changeApplicationStatus(
+            @Parameter(description = "Application ID")
             @PathVariable Long id,
+
+            @Parameter(description = "New application status")
             @RequestParam ApplicationStatus status
     ) {
 
@@ -119,13 +193,24 @@ public class JobApplicationController {
 
         return ResponseEntity.ok().build();
     }
-    
-    
-    // ================= JOB SEEKER ENDPOINTS =================
+
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(
+            summary = "Get my applications",
+            description = "Fetch paginated applications for the logged-in job seeker."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Applications fetched successfully"),
+            @ApiResponse(responseCode = "401", description = "Unauthorized"),
+            @ApiResponse(responseCode = "403", description = "Only job seekers can access this endpoint")
+    })
+    @Parameters({
+            @Parameter(name = "page", description = "Page number (default = 0)"),
+            @Parameter(name = "size", description = "Page size (default = 10)")
+    })
     @PreAuthorize("hasRole('JOB_SEEKER')")
     @GetMapping("/my")
     public ResponseEntity<PagedApplicationsResponse> getMyApplications(
-            Authentication authentication,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -134,36 +219,4 @@ public class JobApplicationController {
                 jobApplicationService.getMyApplications(jobSeekerId, page, size);
         return ResponseEntity.ok(response);
     }
-
-//
-//    // ================= COMPANY ADMIN / RECRUITER ENDPOINTS =================
-//    @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
-//    @GetMapping("/company/job/{jobId}")
-//    public ResponseEntity<PagedApplicationsResponse> getApplicationsByJobCompany(
-//            @PathVariable Long jobId,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size,
-//            Authentication authentication
-//    ) {
-//        
-//    	Long userId = SecurityUtils.getUserId();
-//        PagedApplicationsResponse response =
-//                jobApplicationService.getApplicationsByJobCompany(jobId, userId, page, size);
-//
-//        return ResponseEntity.ok(response);
-//    }
-
-
-//    @PreAuthorize("hasAnyRole('RECRUITER_ADMIN','RECRUITER')")
-//    @GetMapping("/company")
-//    public ResponseEntity<PagedApplicationsResponse> getMyCompanyApplications(
-//            Authentication authentication,
-//            @RequestParam(defaultValue = "0") int page,
-//            @RequestParam(defaultValue = "10") int size
-//    ) {
-//        Long userId = SecurityUtils.getUserId();
-//        PagedApplicationsResponse response =
-//                jobApplicationService.getMyCompanyApplications(userId, page, size);
-//        return ResponseEntity.ok(response);
-//    }
 }

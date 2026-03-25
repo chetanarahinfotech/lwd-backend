@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.dto.education.EducationDTO;
 import com.lwd.jobportal.entity.JobSeekerEducation;
 import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerEducationRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -54,7 +55,7 @@ public class JobSeekerEducationService {
 
         JobSeekerEducation education = educationRepository
                 .findById(educationId)
-                .orElse(null);
+                .orElseThrow(() -> new ResourceNotFoundException("Education not found"));
 
         // If education exists → update
         if (education != null) {

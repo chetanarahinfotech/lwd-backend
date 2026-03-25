@@ -41,7 +41,6 @@ public class GlobalSearchService {
 
                 case "jobs" -> {
                     Page<Job> page = jobRepository.findAll(pageable);
-                    System.out.println("All Jobs");
                     yield GlobalSearchResponse.builder()
                             .jobs(page.stream().map(this::mapJob).toList())
                             .totalPages(page.getTotalPages())
@@ -51,7 +50,6 @@ public class GlobalSearchService {
 
                 case "companies" -> {
                     Page<Company> page = companyRepository.findAll(pageable);
-                    System.out.println("All Companies"); 
                     yield GlobalSearchResponse.builder()
                             .companies(page.stream().map(this::mapCompany).toList())
                             .totalPages(page.getTotalPages())
@@ -61,7 +59,6 @@ public class GlobalSearchService {
 
                 case "candidates" -> {
                     Page<User> page = userRepository.findJobSeekers(pageable);
-                    System.out.println("All Candidates"); 
                     yield GlobalSearchResponse.builder()
                             .candidates(page.stream().map(this::mapUser).toList())
                             .totalPages(page.getTotalPages())
@@ -71,7 +68,6 @@ public class GlobalSearchService {
 
                 case "recruiters" -> {
                     Page<User> page = userRepository.findRecruiters(pageable);
-                    System.out.println("All Recruiters");
                     yield GlobalSearchResponse.builder()
                             .recruiters(page.stream().map(this::mapUser).toList())
                             .totalPages(page.getTotalPages())
@@ -81,7 +77,6 @@ public class GlobalSearchService {
 
                 case "skills" -> {
                     Page<Skill> page = skillRepository.findAll(pageable);
-                    System.out.println("All skills");
                     yield GlobalSearchResponse.builder()
                             .skills(page.stream().map(this::mapSkill).toList())
                             .totalPages(page.getTotalPages())

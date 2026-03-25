@@ -33,25 +33,7 @@ import com.lwd.jobportal.specification.UserSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 
-/**
- * ============================================================
- * AdminService
- * ============================================================
- *
- * This service handles all administrative operations in the system.
- *
- * Responsibilities:
- *  - Manage Users (block/unblock/view)
- *  - Manage Companies (block/unblock/view)
- *  - Manage Jobs (close/view)
- *  - Retrieve Recruiters under a Company
- *
- * Security:
- *  - Only users with ADMIN role are allowed to perform these actions.
- *
- * Transactional:
- *  - All operations are wrapped in a transactional context.
- */
+
 @Service
 @RequiredArgsConstructor
 @Transactional

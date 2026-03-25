@@ -99,6 +99,12 @@ public class JobService {
         else {
             throw new AccessDeniedException("Invalid role for job creation");
         }
+        
+        if (request.getApplicationSource() == ApplicationSource.EXTERNAL &&
+        		(request.getExternalApplicationUrl() == null || request.getExternalApplicationUrl().isBlank())) {
+
+        	    throw new IllegalArgumentException("External application URL is required for EXTERNAL jobs");
+        	}
 
         Job job = buildJob(request, user, company);
         job.setStatus(JobStatus.OPEN);
@@ -115,7 +121,7 @@ public class JobService {
 	     User user = getUserById(userId);
 	
 	     Job job = jobRepository.findById(jobId)
-	             .orElseThrow(() -> new RuntimeException("Job not found"));
+	             .orElseThrow(() -> new ResourceNotFoundException("Job not found"));
 	
 	     validateOwnership(user, job);
 	

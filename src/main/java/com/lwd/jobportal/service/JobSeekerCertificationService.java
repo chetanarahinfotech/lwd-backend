@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.dto.cretification.CertificationDTO;
 import com.lwd.jobportal.entity.JobSeekerCertification;
 import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.exception.ResourceNotFoundException;
 import com.lwd.jobportal.repository.JobSeekerCertificationRepository;
 import com.lwd.jobportal.repository.UserRepository;
 
@@ -24,7 +25,7 @@ public class JobSeekerCertificationService {
     public CertificationDTO createCertification(Long userId, CertificationDTO dto) {
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         JobSeekerCertification certification = JobSeekerCertification.builder()
                 .user(user)
@@ -47,7 +48,7 @@ public class JobSeekerCertificationService {
     public CertificationDTO updateCertification(Long id, CertificationDTO dto) {
 
         JobSeekerCertification existing = certificationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Certification not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Certification not found"));
 
         existing.setCertificateName(dto.getCertificateName());
         existing.setIssuingOrganization(dto.getIssuingOrganization());

@@ -46,11 +46,19 @@ public class SecurityConfig {
                     .requestMatchers("/api/job-applications/**").permitAll()
                     
                     .requestMatchers("/api/jobs/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    .requestMatchers("/actuator/health").permitAll()
+                    .requestMatchers("/actuator/info").hasRole("ADMIN")
+                    .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
+                    
+                    
                     .requestMatchers("/api/plans/**").permitAll()
                     .requestMatchers("/api/plan/**").permitAll()
                     .requestMatchers("/api/dashboard/**").hasAnyRole("ADMIN", "RECRUITER_ADMIN", "RECRUITER")
                     .requestMatchers("/api/job-seekers/**").permitAll()
                     .requestMatchers("/api/education/**").permitAll()
+                    
+                    
                     .anyRequest().authenticated()
             )
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
