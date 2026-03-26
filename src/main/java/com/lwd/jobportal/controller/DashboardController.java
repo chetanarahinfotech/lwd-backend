@@ -47,7 +47,6 @@ public class DashboardController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/admin")
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<AdminDashboardDTO> getAdminDashboard() {
         return ResponseEntity.ok(adminService.getAdminDashboard());
     }
