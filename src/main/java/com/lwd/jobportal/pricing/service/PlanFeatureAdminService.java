@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +32,10 @@ public class PlanFeatureAdminService {
     /**
      * Upsert a single feature for a plan
      */
+    @CacheEvict(
+    	    value = {"planFeatures", "planFeature", "candidatePlans", "recruiterPlans", "allPlans"},
+    	    allEntries = true
+    	)
     @Transactional
     public void upsertFeature(Long planId, PlanFeatureRequest request) {
 
@@ -75,6 +80,10 @@ public class PlanFeatureAdminService {
     /**
      * Bulk update features for a plan
      */
+    @CacheEvict(
+    	    value = {"planFeatures", "planFeature", "candidatePlans", "recruiterPlans", "allPlans"},
+    	    allEntries = true
+    	)
     @Transactional
     public void upsertFeaturesBulk(Long planId, BulkPlanFeatureRequest bulkRequest) {
 

@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import com.lwd.jobportal.exception.ResourceNotFoundException;
@@ -30,6 +31,7 @@ public class PlanService {
     private final PlanRepository planRepository;
     private final PlanFeatureService planFeatureService;
 
+    @CacheEvict(value = {"candidatePlans", "recruiterPlans", "allPlans"}, allEntries = true)
     @Transactional
     public PlanResponse createPlan(PlanRequest request) {
         Plan plan = Plan.builder()
@@ -46,6 +48,7 @@ public class PlanService {
         return map(plan);
     }
 
+    @CacheEvict(value = {"candidatePlans", "recruiterPlans", "allPlans"}, allEntries = true)
     @Transactional
     public PlanResponse updatePlan(Long planId, PlanRequest request) {
         Plan plan = planRepository.findById(planId)
@@ -70,6 +73,8 @@ public class PlanService {
                 .toList();
     }
 
+    
+    @CacheEvict(value = {"candidatePlans", "recruiterPlans", "allPlans"}, allEntries = true)
     @Transactional
     public void togglePlan(Long planId, boolean active) {
         Plan plan = planRepository.findById(planId)

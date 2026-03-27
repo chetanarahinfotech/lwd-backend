@@ -21,6 +21,6 @@ public interface FeatureRepository extends JpaRepository<Feature, Long> {
     List<Feature> findByCodeIn(List<String> codes);
 
 
-	List<Feature> findByPlanType(PlanType type);
+	List<Feature> findByPlanType(PlanType planType);
 
 }

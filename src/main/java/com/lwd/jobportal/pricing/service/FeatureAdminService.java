@@ -1,8 +1,8 @@
 package com.lwd.jobportal.pricing.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +23,10 @@ public class FeatureAdminService {
 
     private final FeatureRepository featureRepository;
 
-    // ➕ Create Feature
+    @CacheEvict(
+    	    value = {"candidatePlans", "recruiterPlans", "allPlans", "planFeatures", "planFeature"},
+    	    allEntries = true
+    	)
     @Transactional
     public FeatureResponse createFeature(FeatureRequest request) {
         String code = normalizeCode(request.getCode());
@@ -43,7 +46,10 @@ public class FeatureAdminService {
         return mapToResponse(feature, null);
     }
 
-    // ✏️ Update Feature (code immutable)
+    @CacheEvict(
+    	    value = {"candidatePlans", "recruiterPlans", "allPlans", "planFeatures", "planFeature"},
+    	    allEntries = true
+    	)
     @Transactional
     public FeatureResponse updateFeature(Long id, FeatureRequest request) {
         Feature feature = featureRepository.findById(id)
@@ -57,50 +63,54 @@ public class FeatureAdminService {
         return mapToResponse(feature, null);
     }
 
-    // ❌ Delete Feature
+    @CacheEvict(
+    	    value = {"candidatePlans", "recruiterPlans", "allPlans", "planFeatures", "planFeature"},
+    	    allEntries = true
+    	)
     @Transactional
     public void deleteFeature(Long id) {
-        if (!featureRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Feature not found with id: " + id);
-        }
-        featureRepository.deleteById(id);
+        Feature feature = featureRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Feature not found with id: " + id));
+
+        featureRepository.delete(feature);
     }
 
-    // 📋 Get single feature
     public FeatureResponse getFeature(Long id) {
         Feature feature = featureRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Feature not found with id: " + id));
         return mapToResponse(feature, null);
     }
 
-    // 📋 List all features
     public List<FeatureResponse> getAllFeatures() {
         return featureRepository.findAll().stream()
-                .map(f -> mapToResponse(f, null))
-                .collect(Collectors.toList());
+                .map(feature -> mapToResponse(feature, null))
+                .toList();
     }
 
-    // 📋 List features by PlanType
     public List<FeatureResponse> getFeaturesByPlanType(PlanType planType) {
-        return featureRepository.findAll().stream()
-                .filter(f -> f.getPlanType() == planType)
-                .map(f -> mapToResponse(f, null))
-                .collect(Collectors.toList());
+        return featureRepository.findByPlanType(planType).stream()
+                .map(feature -> mapToResponse(feature, null))
+                .toList();
     }
 
-    // 🔹 Normalize code input
     private String normalizeCode(String code) {
-        return code.toUpperCase().replaceAll("[^A-Z_]", "_");
+        if (code == null || code.trim().isEmpty()) {
+            throw new InvalidOperationException("Feature code is required");
+        }
+
+        return code.trim()
+                .toUpperCase()
+                .replaceAll("[^A-Z0-9]+", "_")
+                .replaceAll("^_+|_+$", "");
     }
 
-    // 🔹 Map feature + optional planFeature to FeatureResponse
     private FeatureResponse mapToResponse(Feature feature, PlanFeature planFeature) {
         return FeatureResponse.builder()
                 .id(feature.getId())
                 .featureCode(feature.getCode())
                 .planType(feature.getPlanType())
                 .description(feature.getDescription())
-                .enabled(planFeature != null && planFeature.getEnabled())
+                .enabled(planFeature != null && Boolean.TRUE.equals(planFeature.getEnabled()))
                 .limitValue(planFeature != null ? planFeature.getLimitValue() : null)
                 .limitType(planFeature != null ? planFeature.getLimitType() : null)
                 .build();
