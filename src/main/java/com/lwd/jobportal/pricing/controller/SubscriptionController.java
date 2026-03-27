@@ -24,6 +24,9 @@ public class SubscriptionController {
             @PathVariable Long planId) {
 
         Long userId = SecurityUtils.getUserId();
+        if (userId == null) {
+            throw new RuntimeException("Unauthorized user");
+        }
 
         SubscriptionResponse response =
                 subscriptionService.subscribe(userId, planId);
@@ -37,7 +40,10 @@ public class SubscriptionController {
     @GetMapping("/current")
     public ResponseEntity<SubscriptionResponse> getCurrentSubscription() {
 
-        Long userId = SecurityUtils.getUserId();
+    	Long userId = SecurityUtils.getUserId();
+    	if (userId == null) {
+    	    throw new RuntimeException("Unauthorized user");
+    	}
 
         var sub = subscriptionService.getActiveSubscription(userId);
 
@@ -63,7 +69,11 @@ public class SubscriptionController {
     @PostMapping("/cancel")
     public ResponseEntity<String> cancelSubscription() {
 
+      
         Long userId = SecurityUtils.getUserId();
+        if (userId == null) {
+            throw new RuntimeException("Unauthorized user");
+        }
 
         subscriptionService.cancelSubscription(userId);
 

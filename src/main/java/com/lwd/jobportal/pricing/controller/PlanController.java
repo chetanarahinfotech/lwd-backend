@@ -2,7 +2,6 @@ package com.lwd.jobportal.pricing.controller;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.lwd.jobportal.enums.Role;
