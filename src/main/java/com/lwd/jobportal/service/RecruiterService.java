@@ -324,31 +324,67 @@ public class RecruiterService {
 
     // ==================== PRIVATE HELPERS ====================
     private JobStatsDTO mapJobStats(Job job) {
-        JobStatsDTO stats = new JobStatsDTO();
-        stats.setJobId(job.getId());
-        stats.setJobTitle(job.getTitle());
-        stats.setApplications(jobApplicationRepository.countByJobId(job.getId()));
-        stats.setShortlisted(jobApplicationRepository.countByJobIdAndStatus(job.getId(), ApplicationStatus.SHORTLISTED));
-        stats.setRejected(jobApplicationRepository.countByJobIdAndStatus(job.getId(), ApplicationStatus.REJECTED));
-        stats.setPending(jobApplicationRepository.countByJobIdAndStatusIn(job.getId(), List.of(ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW_SCHEDULED)));
-        stats.setInterview(jobApplicationRepository.countByJobIdAndStatus(job.getId(), ApplicationStatus.INTERVIEW_SCHEDULED));
-        return stats;
+
+        Long jobId = job.getId();
+
+        long applications = jobApplicationRepository.countByJobId(jobId);
+
+        long shortlisted = jobApplicationRepository.countByJobIdAndStatus(
+                jobId,
+                ApplicationStatus.SHORTLISTED
+        );
+
+        long rejected = jobApplicationRepository.countByJobIdAndStatus(
+                jobId,
+                ApplicationStatus.REJECTED
+        );
+
+        long pending = jobApplicationRepository.countByJobIdAndStatusIn(
+                jobId,
+                List.of(ApplicationStatus.APPLIED, ApplicationStatus.INTERVIEW_SCHEDULED)
+        );
+
+        long interview = jobApplicationRepository.countByJobIdAndStatus(
+                jobId,
+                ApplicationStatus.INTERVIEW_SCHEDULED
+        );
+
+        return JobStatsDTO.builder()
+                .jobId(jobId)
+                .jobTitle(job.getTitle())
+                .applications(applications)
+                .shortlisted(shortlisted)
+                .rejected(rejected)
+                .pending(pending)
+                .interview(interview)
+                .build();
     }
 
     private RecentApplicationDTO mapRecentApplication(JobApplication app) {
-        RecentApplicationDTO dto = new RecentApplicationDTO();
-        dto.setApplicationId(app.getId());
+
+        String candidateName;
+
         if (app.getFullName() != null && !app.getFullName().isEmpty()) {
-            dto.setCandidateName(app.getFullName());
+            candidateName = app.getFullName();
         } else if (app.getJobSeeker() != null) {
-            dto.setCandidateName(app.getJobSeeker().getName());
+            candidateName = app.getJobSeeker().getName();
         } else {
-            dto.setCandidateName("Unknown");
+            candidateName = "Unknown";
         }
-        dto.setJobTitle(app.getJob().getTitle());
-        dto.setAppliedDate(app.getAppliedAt().toLocalDate().toString());
-        dto.setStatus(app.getStatus().name());
-        dto.setApplicationSource(app.getApplicationSource() != null ? app.getApplicationSource().name() : "PORTAL");
-        return dto;
+
+        return RecentApplicationDTO.builder()
+                .applicationId(app.getId())
+                .candidateName(candidateName)
+                .jobTitle(app.getJob() != null ? app.getJob().getTitle() : null)
+                .appliedDate(app.getAppliedAt() != null
+                        ? app.getAppliedAt().toLocalDate().toString()
+                        : null)
+                .status(app.getStatus() != null ? app.getStatus().name() : null)
+                .applicationSource(
+                        app.getApplicationSource() != null
+                                ? app.getApplicationSource().name()
+                                : "PORTAL"
+                )
+                .build();
     }
 }

@@ -1,10 +1,10 @@
 package com.lwd.jobportal.specification;
 
 import com.lwd.jobportal.dto.jobdto.JobSearchRequest;
+import com.lwd.jobportal.dto.jobdto.SearchRecommendationCriteria;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.JobSeeker;
-import com.lwd.jobportal.entity.Skill;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.JobStatus;
 import com.lwd.jobportal.enums.JobType;
@@ -240,104 +240,168 @@ public class JobSpecification {
     }
 
     
-    
     public static Specification<Job> recommendedJobs(JobSeeker seeker) {
         return (root, query, cb) -> {
 
-            boolean isCountQuery = query.getResultType() == Long.class;
-
-//            if (!isCountQuery) {
-//                root.fetch("company", JoinType.LEFT);
-//                query.distinct(true);
-//            }
+            if (query.getResultType() != Long.class) {
+                root.fetch("company", JoinType.LEFT);
+                root.fetch("createdBy", JoinType.LEFT);
+                query.distinct(true);
+            }
 
             List<Predicate> predicates = new ArrayList<>();
 
-            // ✅ Only active public jobs
             predicates.add(cb.isFalse(root.get("deleted")));
             predicates.add(cb.equal(root.get("status"), JobStatus.OPEN));
 
-            // ✅ Experience match
             if (seeker.getTotalExperience() != null) {
                 predicates.add(
-                    cb.lessThanOrEqualTo(
-                        root.get("minExperience"),
-                        seeker.getTotalExperience()
-                    )
+                    cb.lessThanOrEqualTo(root.get("minExperience"), seeker.getTotalExperience())
                 );
 
                 predicates.add(
                     cb.or(
                         cb.isNull(root.get("maxExperience")),
-                        cb.greaterThanOrEqualTo(
-                            root.get("maxExperience"),
-                            seeker.getTotalExperience()
-                        )
+                        cb.greaterThanOrEqualTo(root.get("maxExperience"), seeker.getTotalExperience())
                     )
                 );
             }
 
-            // ✅ Salary / CTC match
             if (seeker.getExpectedCTC() != null) {
                 predicates.add(
                     cb.or(
                         cb.isNull(root.get("maxSalary")),
-                        cb.greaterThanOrEqualTo(
-                            root.get("maxSalary"),
-                            seeker.getExpectedCTC()
-                        )
+                        cb.greaterThanOrEqualTo(root.get("maxSalary"), seeker.getExpectedCTC())
                     )
                 );
             }
 
-            // ✅ Preferred location
-//            if (seeker.getPreferredLocation() != null &&
-//                !seeker.getPreferredLocation().isBlank()) {
-//
-//                predicates.add(
-//                    cb.like(
-//                        cb.lower(root.get("location")),
-//                        "%" + seeker.getPreferredLocation().trim().toLowerCase() + "%"
-//                    )
-//                );
-//            }
-
-            // ✅ Skills match
-//            if (seeker.getSkills() != null && !seeker.getSkills().isEmpty()) {
-//                Predicate skillsPredicate = cb.disjunction();
-//
-//                for (Skill skill : seeker.getSkills()) {
-//                    if (skill != null &&
-//                        skill.getName() != null &&
-//                        !skill.getName().isBlank()) {
-//
-//                        skillsPredicate = cb.or(
-//                            skillsPredicate,
-//                            cb.like(
-//                                cb.lower(root.get("skills")),
-//                                "%" + skill.getName().trim().toLowerCase() + "%"
-//                            )
-//                        );
-//                    }
-//                }
-//
-//                predicates.add(skillsPredicate);
-//            }
-
-            // ✅ Notice period compatibility
             if (seeker.getNoticePeriod() != null) {
                 predicates.add(
                     cb.or(
                         cb.isNull(root.get("maxNoticePeriod")),
-                        cb.greaterThanOrEqualTo(
-                            root.get("maxNoticePeriod"),
-                            seeker.getNoticePeriod()
-                        )
+                        cb.greaterThanOrEqualTo(root.get("maxNoticePeriod"), seeker.getNoticePeriod())
                     )
                 );
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+    
+    public static Specification<Job> searchHistoryRecommendedJobs(SearchRecommendationCriteria criteria) {
+        return (root, query, cb) -> {
+
+            if (query.getResultType() != Long.class) {
+                root.fetch("company", JoinType.LEFT);
+                root.fetch("createdBy", JoinType.LEFT);
+                query.distinct(true);
+            }
+
+            Join<Job, Company> companyJoin = root.join("company", JoinType.LEFT);
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            predicates.add(cb.isFalse(root.get("deleted")));
+            predicates.add(cb.equal(root.get("status"), JobStatus.OPEN));
+
+            if (criteria != null) {
+
+                if (criteria.getKeyword() != null && !criteria.getKeyword().isBlank()) {
+                    String keyword = "%" + criteria.getKeyword().trim().toLowerCase() + "%";
+
+                    predicates.add(
+                            cb.or(
+                                    cb.like(cb.lower(root.get("title")), keyword),
+                                    cb.like(cb.lower(root.get("description")), keyword),
+                                    cb.like(cb.lower(root.get("skills")), keyword),
+                                    cb.like(cb.lower(root.get("location")), keyword),
+                                    cb.like(cb.lower(root.get("industry")), keyword),
+                                    cb.like(cb.lower(companyJoin.get("companyName")), keyword)
+                            )
+                    );
+                }
+
+                if (criteria.getLocation() != null && !criteria.getLocation().isBlank()) {
+                    predicates.add(
+                            cb.like(
+                                    cb.lower(root.get("location")),
+                                    "%" + criteria.getLocation().trim().toLowerCase() + "%"
+                            )
+                    );
+                }
+
+                if (criteria.getIndustry() != null && !criteria.getIndustry().isBlank()) {
+                    predicates.add(
+                            cb.like(
+                                    cb.lower(root.get("industry")),
+                                    "%" + criteria.getIndustry().trim().toLowerCase() + "%"
+                            )
+                    );
+                }
+
+                if (criteria.getCompanyName() != null && !criteria.getCompanyName().isBlank()) {
+                    predicates.add(
+                            cb.like(
+                                    cb.lower(companyJoin.get("companyName")),
+                                    "%" + criteria.getCompanyName().trim().toLowerCase() + "%"
+                            )
+                    );
+                }
+
+                if (criteria.getJobType() != null) {
+                    predicates.add(cb.equal(root.get("jobType"), criteria.getJobType()));
+                }
+
+                if (criteria.getMinExp() != null) {
+                    predicates.add(
+                            cb.or(
+                                    cb.isNull(root.get("maxExperience")),
+                                    cb.greaterThanOrEqualTo(root.get("maxExperience"), criteria.getMinExp())
+                            )
+                    );
+                }
+
+                if (criteria.getMaxExp() != null) {
+                    predicates.add(
+                            cb.or(
+                                    cb.isNull(root.get("minExperience")),
+                                    cb.lessThanOrEqualTo(root.get("minExperience"), criteria.getMaxExp())
+                            )
+                    );
+                }
+
+                if (criteria.getMaxNoticePeriod() != null) {
+                    predicates.add(
+                            cb.or(
+                                    cb.isNull(root.get("maxNoticePeriod")),
+                                    cb.greaterThanOrEqualTo(root.get("maxNoticePeriod"), criteria.getMaxNoticePeriod())
+                            )
+                    );
+                }
+
+                if (criteria.getLwdPreferred() != null) {
+                    predicates.add(cb.equal(root.get("lwdPreferred"), criteria.getLwdPreferred()));
+                }
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    public static Specification<Job> latestOpenJobs() {
+        return (root, query, cb) -> {
+
+            if (query.getResultType() != Long.class) {
+                root.fetch("company", JoinType.LEFT);
+                root.fetch("createdBy", JoinType.LEFT);
+                query.distinct(true);
+            }
+
+            return cb.and(
+                    cb.isFalse(root.get("deleted")),
+                    cb.equal(root.get("status"), JobStatus.OPEN)
+            );
         };
     }
 

@@ -2,8 +2,8 @@ package com.lwd.jobportal.service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -26,11 +26,19 @@ import com.lwd.jobportal.enums.NoticeStatus;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.exception.ResourceNotFoundException;
+import com.lwd.jobportal.pricing.service.FeatureAccessService;
 import com.lwd.jobportal.repository.*;
+import com.lwd.jobportal.searchhistory.dto.SaveSearchHistoryRequest;
+import com.lwd.jobportal.searchhistory.entity.SearchHistory;
+import com.lwd.jobportal.searchhistory.enums.SearchModule;
+import com.lwd.jobportal.searchhistory.enums.SearchType;
+import com.lwd.jobportal.searchhistory.service.SearchHistoryService;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.specification.IndustryCount;
 import com.lwd.jobportal.specification.JobSpecification;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -43,6 +51,12 @@ public class JobService {
     private final UserRepository userRepository;
     private final JobSeekerRepository jobSeekerRepository;
     private final JobApplicationRepository jobApplicationRepository;
+
+    private final FeatureAccessService featureAccessService;
+    private final SearchHistoryService searchHistoryService;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     // ==================================================
     // ADMIN CREATE JOB
@@ -368,6 +382,140 @@ public class JobService {
 
         return mapToResponse(job, countMap);
     }
+    
+    
+  public JobFullResponse getJobFullById(Long jobId) {
+
+    Job job = getJobByIdInternal(jobId);
+
+    Long totalApplications = jobApplicationRepository.countByJobId(jobId);
+
+    boolean canViewRecruiterDetails = false;
+    boolean canMessageRecruiter = false;
+
+    Long recruiterId = null;
+    String recruiterName = null;
+    String recruiterEmail = null;
+    String recruiterPhone = null;
+
+    try {
+        Long currentUserId = SecurityUtils.getUserId();
+
+        if (currentUserId != null) {
+            canViewRecruiterDetails = featureAccessService.hasAccess(
+                    currentUserId,
+                    "VIEW_RECRUITER_DETAILS"
+            );
+
+            canMessageRecruiter = featureAccessService.hasAccess(
+                    currentUserId,
+                    "MESSAGE_RECRUITER"
+            );
+
+            if (canViewRecruiterDetails && job.getCreatedBy() != null) {
+                User recruiter = job.getCreatedBy();
+                recruiterId = recruiter.getId();
+                recruiterName = recruiter.getName();
+                recruiterEmail = recruiter.getEmail();
+                recruiterPhone = recruiter.getPhone();
+            }
+        }
+    } catch (Exception ignored) {
+        // safe fallback for anonymous / unauthenticated users
+    }
+
+    Company company = job.getCompany();
+
+    return JobFullResponse.builder()
+
+            // ================= BASIC INFO =================
+            .id(job.getId())
+            .title(job.getTitle())
+            .description(job.getDescription())
+            .location(job.getLocation())
+            .industry(job.getIndustry())
+
+            // ================= SALARY =================
+            .minSalary(job.getMinSalary())
+            .maxSalary(job.getMaxSalary())
+
+            // ================= EXPERIENCE =================
+            .minExperience(job.getMinExperience())
+            .maxExperience(job.getMaxExperience())
+
+            // ================= JOB DETAILS =================
+            .jobType(job.getJobType() != null ? job.getJobType().name() : null)
+            .roleCategory(job.getRoleCategory())
+            .department(job.getDepartment())
+            .workplaceType(job.getWorkplaceType())
+
+            // ================= CANDIDATE PREFERENCES =================
+            .education(job.getEducation())
+            .skills(job.getSkills())
+            .genderPreference(job.getGenderPreference())
+            .ageLimit(job.getAgeLimit())
+
+            // ================= JOB CONTENT =================
+            .responsibilities(job.getResponsibilities())
+            .requirements(job.getRequirements())
+            .benefits(job.getBenefits())
+
+            // ================= STATUS =================
+            .status(job.getStatus() != null ? job.getStatus().name() : null)
+            .deleted(job.getDeleted())
+
+            // ================= APPLICATION DATA =================
+            .applicationSource(job.getApplicationSource())
+            .externalApplicationUrl(job.getExternalApplicationUrl())
+
+            // ================= LWD FEATURES =================
+            .noticePreference(
+                    job.getNoticePreference() != null
+                            ? job.getNoticePreference().name()
+                            : null
+            )
+            .maxNoticePeriod(job.getMaxNoticePeriod())
+            .lwdPreferred(job.getLwdPreferred())
+
+            // ================= META =================
+            .createdBy(job.getCreatedBy() != null ? job.getCreatedBy().getName() : null)
+            .createdAt(job.getCreatedAt())
+
+            // ================= ANALYTICS =================
+            .totalApplications(totalApplications)
+
+            // ================= RELATIONS =================
+            .company(
+                    company != null
+                            ? CompanySummaryDTO.builder()
+                                    .id(company.getId())
+                                    .companyName(company.getCompanyName())
+                                    .logo(company.getLogoUrl())
+                                    .build()
+                            : null
+            )
+
+            // ================= RECOMMENDATION =================
+            .matchScore(null)
+
+            // ================= PREMIUM =================
+            .canViewRecruiterDetails(canViewRecruiterDetails)
+            .canMessageRecruiter(canMessageRecruiter)
+            .premiumLocked(!(canViewRecruiterDetails || canMessageRecruiter))
+
+            .recruiterId(recruiterId)
+            .recruiterName(recruiterName)
+            .recruiterEmail(recruiterEmail)
+            .recruiterPhone(recruiterPhone)
+
+            .upgradeMessage(
+                    !(canViewRecruiterDetails || canMessageRecruiter)
+                            ? "Upgrade to Premium to view recruiter details and message them directly."
+                            : null
+            )
+
+            .build();
+}
 
     
     
@@ -585,6 +733,21 @@ public class JobService {
 	     );
 	
 	     Page<Job> jobPage = jobRepository.findAll(spec, pageable);
+	     
+	     // save search history
+	     savePublicJobSearchHistory(
+	             keyword,
+	             location,
+	             industry,
+	             companyName,
+	             minExp,
+	             maxExp,
+	             jobType,
+	             noticePreference,
+	             maxNoticePeriod,
+	             lwdPreferred,
+	             jobPage.getTotalElements()
+	     );
 	
 	     return toPagedResponse(jobPage.map(this::mapToResponse));
 	 }
@@ -712,34 +875,81 @@ public class JobService {
     }
     
     
-    
-    
-    public PagedResponse<JobResponse> getRecommendedJobs(
-	        int page,
-	        int size
-	) {
-	
-	    Long userId = SecurityUtils.getUserId();
-	
-	    JobSeeker seeker = jobSeekerRepository
-	            .findByUserId(userId)
-	            .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
-	
-	    Specification<Job> spec =
-	            JobSpecification.recommendedJobs(seeker);
-	
-	    Pageable pageable = PageRequest.of(page, size);
-	
-	    Page<Job> jobPage = jobRepository.findAll(spec, pageable);
-	
-	    List<JobResponse> content = jobPage.stream()
-	            .map(job -> mapToRecommendedJobResponse(job, seeker))
-	            .sorted(Comparator.comparing(JobResponse::getMatchScore).reversed())
-	            .toList();
-	
-	    return PaginationUtil.buildPagedResponse(jobPage, content);
-	}
+    public PagedResponse<JobResponse> getRecommendedJobs(int page, int size) {
 
+        Long userId = SecurityUtils.getUserId();
+
+        JobSeeker seeker = jobSeekerRepository
+                .findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+
+
+        Pageable pageable = PageRequest.of(
+                Math.max(page, 0),
+                size <= 0 ? 10 : Math.min(size, 20),
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        List<SearchHistory> searches = searchHistoryService.getRecentSearchesByType(
+                userId,
+                Role.JOB_SEEKER,
+                SearchType.JOB,
+                1
+        );
+
+
+        if (searches != null && !searches.isEmpty()) {
+
+            Page<Job> result = jobRepository.findAll(
+                    JobSpecification.searchHistoryRecommendedJobs(buildSearchCriteria(searches)),
+                    pageable
+            );
+
+            if (result.hasContent()) {
+                return mapRecommended(result, seeker, "SEARCH");
+            }
+        }
+
+        if (hasProfileData(seeker)) {
+
+            Page<Job> result = jobRepository.findAll(
+                    JobSpecification.recommendedJobs(seeker),
+                    pageable
+            );
+
+            if (result.hasContent()) {
+                return mapRecommended(result, seeker, "PROFILE");
+            }
+        }
+
+
+        Page<Job> result = jobRepository.findAll(
+                JobSpecification.latestOpenJobs(),
+                pageable
+        );
+
+        return mapRecommended(result, seeker, "LATEST");
+    }
+   
+    private SearchRecommendationCriteria buildSearchCriteria(List<SearchHistory> searches) {
+
+        if (searches == null || searches.isEmpty()) {
+            return null;
+        }
+
+        SearchHistory latest = searches.get(0); // only latest search
+
+        return SearchRecommendationCriteria.builder()
+                .keyword(latest.getKeyword())
+                .build();
+    }
+
+    private boolean hasProfileData(JobSeeker seeker) {
+        return seeker.getTotalExperience() != null
+                || seeker.getExpectedCTC() != null
+                || seeker.getNoticePeriod() != null
+                || (seeker.getPreferredLocation() != null && !seeker.getPreferredLocation().isBlank());
+    }
 
     
 
@@ -797,6 +1007,162 @@ public class JobService {
         }
 
         throw new IllegalArgumentException("You are not allowed to update jobs");
+    }
+    
+    private PagedResponse<JobResponse> mapRecommended(
+            Page<Job> page,
+            JobSeeker seeker,
+            String source
+    ) {
+
+        List<Long> jobIds = page.getContent()
+                .stream()
+                .map(Job::getId)
+                .toList();
+
+
+        Map<Long, Long> countMap = getApplicationCountMap(jobIds);
+
+        List<JobResponse> content = page.getContent()
+                .stream()
+                .map(job -> {
+                    return mapToRecommendedResponse(job, seeker, countMap, source);
+                })
+                .toList();
+
+
+        return PaginationUtil.buildPagedResponse(page, content);
+    }
+    
+    private JobResponse mapToRecommendedResponse(
+            Job job,
+            JobSeeker seeker,
+            Map<Long, Long> countMap,
+            String source
+    ) {
+
+        Company company = job.getCompany();
+        Integer totalExperience = seeker.getTotalExperience();
+
+        Double expectedCTC = seeker.getExpectedCTC();
+        Integer noticePeriod = seeker.getNoticePeriod();
+        String preferredLocation = seeker.getPreferredLocation();
+        int matchScore = calculateMatchScore(
+                job,
+                totalExperience,
+                expectedCTC,
+                noticePeriod,
+                preferredLocation
+        );
+
+        JobResponse response = JobResponse.builder()
+                .id(job.getId())
+                .title(job.getTitle())
+                .description(toShortDescription(job.getDescription(), 120))
+                .location(job.getLocation())
+                .industry(job.getIndustry())
+                .minSalary(job.getMinSalary())
+                .maxSalary(job.getMaxSalary())
+                .minExperience(job.getMinExperience())
+                .maxExperience(job.getMaxExperience())
+                .jobType(job.getJobType() != null ? job.getJobType().name() : null)
+                .workplaceType(job.getWorkplaceType())
+                .maxNoticePeriod(job.getMaxNoticePeriod())
+                .createdAt(job.getCreatedAt())
+                .totalApplications(countMap.getOrDefault(job.getId(), 0L))
+                .company(
+                        company != null
+                                ? CompanySummaryDTO.builder()
+                                        .id(company.getId())
+                                        .companyName(company.getCompanyName())
+                                        .logo(company.getLogoUrl())
+                                        .build()
+                                : null
+                )
+                .matchScore(matchScore)
+                .recommendationSource(source)
+                .build();
+
+
+        return response;
+    }
+    
+    
+    private int calculateMatchScore(
+            Job job,
+            Integer exp,
+            Double ctc,
+            Integer notice,
+            String location
+    ) {
+
+        int score = 0;
+
+        if (exp != null &&
+            job.getMinExperience() != null &&
+            job.getMaxExperience() != null &&
+            exp >= job.getMinExperience() &&
+            exp <= job.getMaxExperience()) {
+            score += 30;
+        }
+
+        if (location != null &&
+            job.getLocation() != null &&
+            job.getLocation().toLowerCase().contains(location.toLowerCase())) {
+            score += 20;
+        }
+
+        if (notice != null &&
+            job.getMaxNoticePeriod() != null &&
+            notice <= job.getMaxNoticePeriod()) {
+            score += 10;
+        }
+
+        if (ctc != null &&
+            job.getMaxSalary() != null &&
+            ctc <= job.getMaxSalary()) {
+            score += 5;
+        }
+
+
+        return score;
+    }
+   
+   
+   
+    private Map<Long, Long> getApplicationCountMap(List<Long> jobIds) {
+
+        Map<Long, Long> countMap = new HashMap<>();
+
+        if (jobIds == null || jobIds.isEmpty()) {
+            return countMap;
+        }
+
+        List<Object[]> counts = jobApplicationRepository.countApplicationsForJobs(jobIds);
+
+        for (Object[] row : counts) {
+            Long jobId = (Long) row[0];
+            Long count = ((Number) row[1]).longValue();
+            countMap.put(jobId, count);
+        }
+
+        return countMap;
+    }
+    
+    
+    
+    private String toShortDescription(String description, int maxLength) {
+        if (description == null || description.isBlank()) {
+            return "";
+        }
+
+        String clean = description.replaceAll("\\s+", " ").trim();
+
+        if (clean.length() <= maxLength) {
+            return clean;
+        }
+
+        return clean.substring(0, maxLength).trim() + "...";
     }
 
 
@@ -1031,100 +1397,57 @@ public class JobService {
     }
 
     
+ 
     
-    
-    private int calculateMatchScore(Job job, JobSeeker seeker) {
-
-	    int score = 0;
-	
-	    // =========================
-	    // 1️⃣ EXPERIENCE (30%)
-	    // =========================
-	    if (seeker.getTotalExperience() != null &&
-	            job.getMinExperience() != null &&
-	            job.getMaxExperience() != null) {
-	
-	        int exp = seeker.getTotalExperience();
-	
-	        if (exp >= job.getMinExperience() &&
-	                exp <= job.getMaxExperience()) {
-	            score += 30;
-	        }
-	    }
-	
-	    // =========================
-	    // 2️⃣ LOCATION (20%)
-	    // =========================
-	    if (seeker.getPreferredLocation() != null &&
-	            job.getLocation() != null &&
-	            job.getLocation().toLowerCase()
-	                    .contains(seeker.getPreferredLocation().toLowerCase())) {
-	        score += 20;
-	    }
-	
-	    // =========================
-	    // 3️⃣ INDUSTRY (15%)
-	    // =========================
-	    if (seeker.getCurrentCompany() != null &&
-	            job.getIndustry() != null &&
-	            job.getIndustry().toLowerCase()
-	                    .contains(seeker.getCurrentCompany().toLowerCase())) {
-	        score += 15;
-	    }
-	
-	    // =========================
-	    // 4️⃣ JOB TYPE (10%)
-	    // =========================
-	    if (job.getJobType() != null) {
-	        score += 10; // you can refine later
-	    }
-	
-	    // =========================
-	    // 5️⃣ NOTICE MATCH (10%)
-	    // =========================
-	    if (seeker.getNoticePeriod() != null &&
-	            job.getMaxNoticePeriod() != null &&
-	            seeker.getNoticePeriod() <= job.getMaxNoticePeriod()) {
-	        score += 10;
-	    }
-	
-	 // =========================
-	 // 6️⃣ SALARY MATCH (5%)
-	 // =========================
-	 if (seeker.getExpectedCTC() != null &&
-	         job.getMinSalary() != null &&
-	         job.getMaxSalary() != null &&
-	         seeker.getExpectedCTC() >= job.getMinSalary() &&
-	         seeker.getExpectedCTC() <= job.getMaxSalary()) {
-
-	     score += 5;
-	 }
-
-	    // =========================
-	    // 7️⃣ PROFILE BOOST (10%)
-	    // =========================
-	    if (seeker.getProfileCompletion() != null &&
-	            seeker.getProfileCompletion() >= 75) {
-	        score += 10;
-	    }
-	
-	    return score;
-    }
-
-
-    
-    private JobResponse mapToRecommendedJobResponse(
-            Job job,
-            JobSeeker seeker
+    private void savePublicJobSearchHistory(
+            String keyword,
+            String location,
+            String industry,
+            String companyName,
+            Integer minExp,
+            Integer maxExp,
+            JobType jobType,
+            NoticeStatus noticePreference,
+            Integer maxNoticePeriod,
+            Boolean lwdPreferred,
+            long totalResults
     ) {
+        try {
+            Long userId = SecurityUtils.getUserId();
+            Role role = SecurityUtils.getRole();
 
-        JobResponse response = mapToResponse(job); // reuse old mapping
+            if (userId == null || role == null) {
+            	System.out.println("userId "+ userId + " role "+ role);
+                return;
+            }
 
-        int score = calculateMatchScore(job, seeker);
+            Map<String, Object> filters = new LinkedHashMap<>();
+            filters.put("location", location);
+            filters.put("industry", industry);
+            filters.put("companyName", companyName);
+            filters.put("minExp", minExp);
+            filters.put("maxExp", maxExp);
+            filters.put("jobType", jobType != null ? jobType.name() : null);
+            filters.put("noticePreference", noticePreference != null ? noticePreference.name() : null);
+            filters.put("maxNoticePeriod", maxNoticePeriod);
+            filters.put("lwdPreferred", lwdPreferred);
 
-        response.setMatchScore(score);
+            searchHistoryService.saveSearchHistory(
+                    SaveSearchHistoryRequest.builder()
+                            .userId(userId)
+                            .role(role)
+                            .module(SearchModule.JOBS)
+                            .searchType(SearchType.JOB)
+                            .keyword(keyword)
+                            .filters(filters)
+                            .resultCount(Math.toIntExact(totalResults))
+                            .sourcePage("/jobs")
+                            .build()
+            );
 
-        return response;
+        } catch (Exception e) {
+            new RuntimeException("Failed to save public job search history", e);
+        }
     }
 
     

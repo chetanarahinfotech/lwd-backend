@@ -1,6 +1,5 @@
 package com.lwd.jobportal.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
 
@@ -86,15 +85,6 @@ public class User {
     @ManyToOne
     @JoinColumn(name = "company_id")
     private Company company;
-
-    @OneToOne(
-    	    mappedBy = "user",
-    	    cascade = CascadeType.ALL,
-    	    orphanRemoval = true,
-    	    fetch = FetchType.LAZY
-    	)
-    	@JsonIgnore
-    	private JobSeeker jobSeekerProfile;
 
 
 

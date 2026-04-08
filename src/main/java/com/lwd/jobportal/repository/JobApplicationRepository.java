@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,6 +14,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import com.lwd.jobportal.dto.jobdto.JobStatsDTO;
 import com.lwd.jobportal.entity.JobApplication;
 import com.lwd.jobportal.enums.ApplicationStatus;
 
@@ -36,9 +38,15 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             "job",
             "job.company",
             "jobSeeker",
-            "jobSeeker.jobSeekerProfile"
     })
     Page<JobApplication> findByJob_Id(Long jobId, Pageable pageable);
+    
+    @EntityGraph(attributePaths = {
+            "job",
+            "job.company",
+            "jobSeeker"
+    })
+    Page<JobApplication> findByJobSeeker_Id(Long userId, Pageable pageable);
     
     
     @Query("""
@@ -54,7 +62,6 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     	        "job",
     	        "job.company",
     	        "jobSeeker",
-    	        "jobSeeker.jobSeekerProfile"
     	})
     	Page<JobApplication> findAll(Pageable pageable);
 
@@ -63,7 +70,6 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             "job",
             "job.company",
             "jobSeeker",
-            "jobSeeker.jobSeekerProfile"
     })
     Page<JobApplication> findByJobCompanyId(Long companyId, Pageable pageable);
 
@@ -72,7 +78,6 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             "job",
             "job.company",
             "jobSeeker",
-            "jobSeeker.jobSeekerProfile"
     })
     Page<JobApplication> findByJobCreatedById(Long userId, Pageable pageable);
 
@@ -81,7 +86,6 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             "job",
             "job.company",
             "jobSeeker",
-            "jobSeeker.jobSeekerProfile"
     })
     Page<JobApplication> findByJobSeekerId(Long jobSeekerId, Pageable pageable);
     
@@ -153,6 +157,22 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     long countByJobIdAndStatus(Long jobId, ApplicationStatus status);
     long countByJobIdAndStatusIn(Long jobId, Collection<ApplicationStatus> statuses);
     List<JobApplication> findTop5ByJobCreatedByIdOrderByAppliedAtDesc(Long recruiterId);
+    @EntityGraph(attributePaths = {"job", "jobSeeker"})
+    @Query("SELECT ja FROM JobApplication ja ORDER BY ja.appliedAt DESC")
+    Page<JobApplication> findAllOrderByAppliedAtDesc(Pageable pageable);
+
+    default List<JobApplication> findRecentApplications(int size) {
+        return findAllOrderByAppliedAtDesc(PageRequest.of(0, size)).getContent();
+    }
+    
+    @EntityGraph(attributePaths = {"job", "jobSeeker"})
+    @Query("""
+        SELECT ja
+        FROM JobApplication ja
+        WHERE ja.job.createdBy.id = :recruiterId
+        ORDER BY ja.appliedAt DESC
+    """)
+    List<JobApplication> findRecentApplicationsByRecruiterId(Long recruiterId, Pageable pageable);
   
 
 }

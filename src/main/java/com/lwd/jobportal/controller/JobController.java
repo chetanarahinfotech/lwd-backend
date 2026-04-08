@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import com.lwd.jobportal.dto.comman.PagedResponse;
 import com.lwd.jobportal.dto.jobdto.CreateJobRequest;
 import com.lwd.jobportal.dto.jobdto.JobAnalyticsResponse;
+import com.lwd.jobportal.dto.jobdto.JobFullResponse;
 import com.lwd.jobportal.dto.jobdto.JobResponse;
 import com.lwd.jobportal.dto.jobdto.JobSearchRequest;
 import com.lwd.jobportal.dto.jobdto.PagedJobResponse;
@@ -295,12 +296,23 @@ public class JobController {
             @ApiResponse(responseCode = "404", description = "Job not found")
     })
     @GetMapping("/{jobId}")
-    public ResponseEntity<JobResponse> getJobById(
-            @Parameter(description = "Job ID")
-            @PathVariable Long jobId
-    ) {
-        return ResponseEntity.ok(jobService.getJobById(jobId));
+    public ResponseEntity<JobFullResponse> getJobById(
+    		@Parameter(description = "Job ID")
+    		@PathVariable Long jobId
+    		) {
+    	System.out.println("fetch job by Id");
+    	return ResponseEntity.ok(jobService.getJobFullById(jobId));
     }
+    
+//    @GetMapping("/{jobId}")
+//    public ResponseEntity<JobResponse> getJobById(
+//            @Parameter(description = "Job ID")
+//            @PathVariable Long jobId
+//    ) {
+//        return ResponseEntity.ok(jobService.getJobById(jobId));
+//    }
+    
+    
 
     // ==================================================
     // GET JOB ANALYTICS

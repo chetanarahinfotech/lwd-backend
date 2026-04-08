@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -195,6 +196,14 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     List<Object[]> countJobsPerIndustry();
 
     long countByCreatedById(Long recruiterId);
+    
+    @EntityGraph(attributePaths = {"company"})
+    @Query("SELECT j FROM Job j ORDER BY j.createdAt DESC")
+    Page<Job> findAllOrderByCreatedAtDesc(Pageable pageable);
+
+    default List<Job> findRecentJobs(int size) {
+        return findAllOrderByCreatedAtDesc(PageRequest.of(0, size)).getContent();
+    }
     
     
     

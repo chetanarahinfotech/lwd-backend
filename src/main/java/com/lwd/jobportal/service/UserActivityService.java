@@ -5,7 +5,10 @@ import com.github.benmanes.caffeine.cache.Caffeine;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class UserActivityService {
@@ -33,5 +36,16 @@ public class UserActivityService {
     // get all active users
     public Map<Long, Long> getActiveUsers() {
         return activeUsersCache.asMap();
+    }
+    
+    public Map<Long, Boolean> getActiveUsers(List<Long> userIds) {
+
+        Map<Long, Long> activeUsers = activeUsersCache.asMap();
+
+        return userIds.stream()
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        activeUsers::containsKey
+                ));
     }
 }

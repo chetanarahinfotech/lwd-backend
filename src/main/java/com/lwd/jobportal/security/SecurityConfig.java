@@ -65,6 +65,9 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/actuator/info").hasRole("ADMIN")
                 .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
+                
+                .requestMatchers("/ws-chat/**").permitAll()
+                .requestMatchers("/api/auth/**").permitAll()
 
                 .anyRequest().authenticated()
             )

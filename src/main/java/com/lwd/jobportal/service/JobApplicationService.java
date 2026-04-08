@@ -1,7 +1,12 @@
 package com.lwd.jobportal.service;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.*;
 import org.springframework.security.access.AccessDeniedException;
@@ -221,22 +226,43 @@ public class JobApplicationService {
     }
     
     // ================= JOB SEEKER: MY APPLICATIONS =================
+    // ================= JOB SEEKER: MY APPLICATIONS =================
     @PreAuthorize("hasRole('JOB_SEEKER')")
     @Transactional(readOnly = true)
-    public PagedApplicationsResponse getMyApplications(Long jobSeekerId, int page, int size) {
-    	if (!userRepository.existsById(jobSeekerId)) {
-            throw new ResourceNotFoundException("Job seeker not found");
+    public PagedApplicationsResponse getMyApplications(Long userId, int page, int size) {
+        if (!userRepository.existsById(userId)) {
+            throw new ResourceNotFoundException("User not found");
         }
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("appliedAt").descending());
-        Page<JobApplication> applications = jobApplicationRepository.findByJobSeekerId(jobSeekerId, pageable);
+
+        Page<JobApplication> applications =
+                jobApplicationRepository.findByJobSeeker_Id(userId, pageable);
+
         return buildPagedResponse(applications);
     }
-    
 
     // ================= HELPER: BUILD PAGED RESPONSE =================
     private PagedApplicationsResponse buildPagedResponse(Page<JobApplication> page) {
+
+        List<Long> userIds = page.getContent().stream()
+                .map(JobApplication::getJobSeeker)
+                .filter(Objects::nonNull)
+                .map(User::getId)
+                .distinct()
+                .toList();
+
+        Map<Long, JobSeeker> jobSeekerMap = userIds.isEmpty()
+                ? Collections.emptyMap()
+                : jobSeekerRepository.findByUserIds(userIds).stream()
+                        .filter(js -> js.getUser() != null)
+                        .collect(Collectors.toMap(
+                                js -> js.getUser().getId(),
+                                Function.identity()
+                        ));
+
         List<JobApplicationResponse> responses = page.getContent().stream()
-                .map(this::mapToResponse)
+                .map(application -> mapToResponse(application, jobSeekerMap))
                 .toList();
 
         return PagedApplicationsResponse.builder()
@@ -248,18 +274,22 @@ public class JobApplicationService {
                 .last(page.isLast())
                 .build();
     }
-    
-    
-    // ================= HELPER: MAP ENTITY → DTO =================
-    private JobApplicationResponse mapToResponse(JobApplication application) {
 
+    // ================= HELPER: MAP ENTITY → DTO =================
+    private JobApplicationResponse mapToResponse(
+            JobApplication application,
+            Map<Long, JobSeeker> jobSeekerMap
+    ) {
         Job job = application.getJob();
-        Company company = job.getCompany();
+        Company company = job != null ? job.getCompany() : null;
         User user = application.getJobSeeker();
-        JobSeeker profile = user != null ? user.getJobSeekerProfile() : null;
+
+        JobSeeker profile = null;
+        if (user != null) {
+            profile = jobSeekerMap.get(user.getId());
+        }
 
         JobSeekerSummaryDTO jobSeekerDTO = null;
-
         if (profile != null) {
             jobSeekerDTO = JobSeekerSummaryDTO.builder()
                     .id(user.getId())
@@ -281,32 +311,34 @@ public class JobApplicationService {
                 .email(application.getEmail())
                 .phone(application.getPhone())
                 .applicationSource(application.getApplicationSource())
-                .externalApplicationUrl(job.getExternalApplicationUrl())
+                .externalApplicationUrl(job != null ? job.getExternalApplicationUrl() : null)
                 .status(application.getStatus())
                 .appliedAt(application.getAppliedAt())
 
                 .jobSeekerId(user != null ? user.getId() : null)
                 .jobSeeker(jobSeekerDTO)
 
-                .job(JobSummaryDTO.builder()
-                        .id(job.getId())
-                        .title(job.getTitle())
-                        .location(job.getLocation())
-                        .jobType(job.getJobType())
-                        .minExperience(job.getMinExperience())
-                        .maxExperience(job.getMaxExperience())
-                        .status(job.getStatus())
-                        .createdAt(job.getCreatedAt())
-                        .build())
+                .job(job != null
+                        ? JobSummaryDTO.builder()
+                                .id(job.getId())
+                                .title(job.getTitle())
+                                .location(job.getLocation())
+                                .jobType(job.getJobType())
+                                .minExperience(job.getMinExperience())
+                                .maxExperience(job.getMaxExperience())
+                                .status(job.getStatus())
+                                .createdAt(job.getCreatedAt())
+                                .build()
+                        : null)
 
-                .company(CompanySummaryDTO.builder()
-                        .id(company.getId())
-                        .companyName(company.getCompanyName())
-                        .logo(company.getLogoUrl())
-                        .build())
+                .company(company != null
+                        ? CompanySummaryDTO.builder()
+                                .id(company.getId())
+                                .companyName(company.getCompanyName())
+                                .logo(company.getLogoUrl())
+                                .build()
+                        : null)
 
                 .build();
     }
-
-
 }

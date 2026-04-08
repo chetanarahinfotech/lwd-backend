@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -61,15 +62,13 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 	
 	 @Override
 	    @EntityGraph(attributePaths = {
-	        "company",
-	        "jobSeekerProfile"
+	        "company"
 	    })
 	    Page<User> findAll(org.springframework.data.jpa.domain.Specification<User> spec, Pageable pageable);
 
 	    @Override
 	    @EntityGraph(attributePaths = {
-	        "company",
-	        "jobSeekerProfile"
+	        "company"
 	    })
 	    Page<User> findAll(Pageable pageable);
 
@@ -81,7 +80,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 	long countByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
 	List<User> findByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
 	
-	@EntityGraph(attributePaths = {"jobSeekerProfile"})
 	@Query("SELECT u FROM User u WHERE u.role = 'JOB_SEEKER'")
 	Page<User> findJobSeekers(Pageable pageable);
 
@@ -92,6 +90,13 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 	@EntityGraph(attributePaths = {"company"})
 	@Query("SELECT u FROM User u WHERE u.role IN ('RECRUITER','RECRUITER_ADMIN')")
 	Page<User> findRecruiters(Pageable pageable);
+	
+	@Query("SELECT u FROM User u ORDER BY u.createdAt DESC")
+	Page<User> findAllOrderByCreatedAtDesc(Pageable pageable);
+
+	default List<User> findRecentUsers(int size) {
+	    return findAllOrderByCreatedAtDesc(PageRequest.of(0, size)).getContent();
+	}
 	
 	
 	

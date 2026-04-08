@@ -1,8 +1,10 @@
 package com.lwd.jobportal.dto.userdto;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class RecentUserDTO {
     private String name;
     private String email;

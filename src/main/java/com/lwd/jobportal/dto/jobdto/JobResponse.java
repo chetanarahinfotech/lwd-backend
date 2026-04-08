@@ -69,4 +69,6 @@ public class JobResponse {
 
     // ================= RECOMMENDATION =================
     private Integer matchScore;
+    
+    private String recommendationSource;
 }

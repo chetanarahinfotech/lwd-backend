@@ -98,10 +98,16 @@ public class FeatureAdminService {
             throw new InvalidOperationException("Feature code is required");
         }
 
-        return code.trim()
+        String normalized = code.trim()
                 .toUpperCase()
                 .replaceAll("[^A-Z0-9]+", "_")
                 .replaceAll("^_+|_+$", "");
+
+        if (normalized.isBlank()) {
+            throw new InvalidOperationException("Invalid feature code");
+        }
+
+        return normalized;
     }
 
     private FeatureResponse mapToResponse(Feature feature, PlanFeature planFeature) {

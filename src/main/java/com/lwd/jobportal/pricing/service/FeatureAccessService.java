@@ -63,6 +63,34 @@ public class FeatureAccessService {
                 feature.getLimitValue()
         );
     }
+    
+    
+    public boolean hasAccess(Long userId, String featureCode) {
+        try {
+            UserSubscription sub = subscriptionService.getActiveSubscription(userId);
+            System.out.println("hasAccess userId=" + userId + ", feature=" + featureCode);
+            System.out.println("subscription=" + (sub != null ? sub.getId() : null));
+
+            if (sub == null) {
+                System.out.println("No active subscription, checking free plan");
+                return hasFreeAccess(userId, featureCode);
+            }
+
+            Long planId = sub.getPlan().getId();
+            PlanType planType = sub.getPlan().getType();
+
+            System.out.println("planId=" + planId + ", planType=" + planType + ", planName=" + sub.getPlan().getName());
+
+            PlanFeature feature = planFeatureService.getFeature(planId, featureCode, planType);
+
+            System.out.println("feature enabled=" + feature.getEnabled());
+
+            return Boolean.TRUE.equals(feature.getEnabled());
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
 
     
@@ -117,6 +145,33 @@ public class FeatureAccessService {
                 featureCode,
                 feature.getLimitValue()
         );
+    }
+    
+    private boolean hasFreeAccess(Long userId, String featureCode) {
+        try {
+            // 1️⃣ Get user plan type
+            PlanType planType = getUserPlanType(userId);
+
+            // 2️⃣ Get FREE plan for that type
+            Plan freePlan = planRepository
+                    .findFirstByTypeAndName(planType, PlanName.FREE)
+                    .orElseThrow(() ->
+                            new ResourceNotFoundException("Free plan not configured for " + planType)
+                    );
+
+            // 3️⃣ Get feature config
+            PlanFeature feature = planFeatureService.getFeature(
+                    freePlan.getId(),
+                    featureCode,
+                    planType
+            );
+
+            // 4️⃣ Enabled check only
+            return Boolean.TRUE.equals(feature.getEnabled());
+
+        } catch (Exception e) {
+            return false;
+        }
     }
 
 

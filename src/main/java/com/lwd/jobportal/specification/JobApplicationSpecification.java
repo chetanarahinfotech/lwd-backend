@@ -12,7 +12,6 @@ import com.lwd.jobportal.dto.jobapplicationdto.ApplicationSearchRequest;
 import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.entity.JobApplication;
-import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 
 import jakarta.persistence.criteria.Join;
@@ -27,11 +26,20 @@ public class JobApplicationSpecification {
             ApplicationSearchRequest request
     ) {
         return (root, query, cb) -> {
-            query.distinct(true);
+
+            // IMPORTANT:
+            // fetch only for main query, not for count query
+            boolean isCountQuery = query.getResultType() == Long.class
+                    || query.getResultType() == long.class;
+
+            if (!isCountQuery) {
+                root.fetch("job", JoinType.LEFT).fetch("company", JoinType.LEFT);
+                root.fetch("jobSeeker", JoinType.LEFT);
+                query.distinct(true);
+            }
 
             Join<JobApplication, Job> jobJoin = root.join("job", JoinType.LEFT);
             Join<Job, Company> companyJoin = jobJoin.join("company", JoinType.LEFT);
-            Join<JobApplication, User> jobSeekerJoin = root.join("jobSeeker", JoinType.LEFT);
 
             List<Predicate> predicates = new ArrayList<>();
 
@@ -39,11 +47,16 @@ public class JobApplicationSpecification {
             if (role == Role.ADMIN) {
                 // all applications
             } else if (role == Role.RECRUITER_ADMIN) {
+                // if Company has createdBy as User relation
                 predicates.add(cb.equal(companyJoin.get("createdById"), userId));
+
+                // If your Company entity really has plain createdById field instead,
+                // use this instead:
+                // predicates.add(cb.equal(companyJoin.get("createdById"), userId));
             } else if (role == Role.RECRUITER) {
                 predicates.add(cb.equal(jobJoin.get("createdBy").get("id"), userId));
             } else {
-                predicates.add(cb.disjunction()); // no data
+                predicates.add(cb.disjunction());
             }
 
             // ================= KEYWORD SEARCH =================
@@ -68,7 +81,10 @@ public class JobApplicationSpecification {
 
             if (request.getSkills() != null && !request.getSkills().trim().isEmpty()) {
                 predicates.add(
-                    cb.like(cb.lower(root.get("skills")), "%" + request.getSkills().trim().toLowerCase() + "%")
+                        cb.like(
+                                cb.lower(root.get("skills")),
+                                "%" + request.getSkills().trim().toLowerCase() + "%"
+                        )
                 );
             }
 

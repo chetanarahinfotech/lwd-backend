@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -23,6 +24,9 @@ public interface JobSeekerRepository extends
         JpaSpecificationExecutor<JobSeeker> {
 
     Optional<JobSeeker> findByUserId(Long userId);
+    
+    @Query("SELECT js FROM JobSeeker js WHERE js.user.id IN :userIds")
+    List<JobSeeker> findByUserIds(@Param("userIds") List<Long> userIds);
 
     // Recruiter filters
     List<JobSeeker> findByNoticeStatus(NoticeStatus status);

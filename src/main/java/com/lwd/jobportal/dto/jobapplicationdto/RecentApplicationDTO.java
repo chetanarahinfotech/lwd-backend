@@ -1,8 +1,10 @@
 package com.lwd.jobportal.dto.jobapplicationdto;
 
+import lombok.Builder;
 import lombok.Data;
 
 @Data
+@Builder
 public class RecentApplicationDTO {
 	
 	private Long applicationId;
