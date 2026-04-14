@@ -95,7 +95,7 @@ public class SecurityConfig {
 
         configuration.setAllowedOrigins(List.of(
             "http://localhost:5173",
-            "https://lwd-jobseeker.netlify.app"
+            "https://lwd-jobseekers.netlify.app"
         ));
 
         configuration.setAllowedMethods(List.of(
