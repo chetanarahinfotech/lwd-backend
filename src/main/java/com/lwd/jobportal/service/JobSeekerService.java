@@ -866,6 +866,7 @@ public class JobSeekerService {
                 .resumeUrl(resume != null? resume.getSecureUrl() : null)
 
                 // profile fields
+                .lastActiveAt(user.getLastActiveAt())
                 .createdAt(jobSeeker.getCreatedAt())
                 .updatedAt(jobSeeker.getUpdatedAt())
                 .resumeViewCount(viewCount)

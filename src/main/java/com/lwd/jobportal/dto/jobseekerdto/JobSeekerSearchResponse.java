@@ -35,6 +35,8 @@ public class JobSeekerSearchResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     
+    private LocalDateTime lastActiveAt;
+    
     private LocalDateTime resumeUploadedAt;
     private LocalDateTime resumeUpdatedAt;
     
