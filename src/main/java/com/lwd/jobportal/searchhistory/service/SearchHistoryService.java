@@ -21,4 +21,6 @@ public interface SearchHistoryService {
     void clearAllForUser(Long userId, String deletedBy);
 
     void cleanupOldHistory(int retentionDays);
+
+	List<RecentSearchResponse> getRecentCandidateSearches(Long userId, Role role, int limit);
 }

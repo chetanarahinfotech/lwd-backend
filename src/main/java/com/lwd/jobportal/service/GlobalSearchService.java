@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.lwd.jobportal.dto.search.CompanySearchDTO;
 import com.lwd.jobportal.dto.search.GlobalSearchResponse;
@@ -33,6 +34,7 @@ public class GlobalSearchService {
     private final UserRepository userRepository;
     private final SkillRepository skillRepository;
 
+    @Transactional(readOnly = true)
     public GlobalSearchResponse globalSearch(String keyword, String category, Pageable pageable) {
 
         if (keyword == null || keyword.trim().isEmpty()) {

@@ -64,7 +64,8 @@ public class SecurityConfig {
                 .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/actuator/info").hasRole("ADMIN")
-                .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
+//                .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
+                .requestMatchers("/actuator/metrics/**").permitAll()
                 
                 .requestMatchers("/ws-chat/**").permitAll()
                 .requestMatchers("/api/auth/**").permitAll()

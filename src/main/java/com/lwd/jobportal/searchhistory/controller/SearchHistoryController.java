@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.searchhistory.dto.RecentSearchResponse;
 import com.lwd.jobportal.searchhistory.service.SearchHistoryService;
 import com.lwd.jobportal.security.SecurityUtils;
@@ -42,6 +43,24 @@ public class SearchHistoryController {
 
         Long userId = getCurrentUserId();
         return ResponseEntity.ok(searchHistoryService.getRecentSearches(userId, limit));
+    }
+    
+    @GetMapping("/candidates/recent")
+    @PreAuthorize("hasAnyRole('RECRUITER','RECRUITER_ADMIN','ADMIN','SUPER_ADMIN')")
+    public ResponseEntity<Map<String, Object>> getRecentCandidateSearches(
+            @RequestParam(defaultValue = "3") int limit
+    ) {
+        Long userId = SecurityUtils.getUserId();
+        Role role = SecurityUtils.getRole();
+
+        List<RecentSearchResponse> data =
+                searchHistoryService.getRecentCandidateSearches(userId, role, limit);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Recent candidate searches fetched successfully",
+                "data", data
+        ));
     }
 
     @DeleteMapping("/{id}")

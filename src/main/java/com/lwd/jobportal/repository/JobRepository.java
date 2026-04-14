@@ -223,27 +223,27 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     	);
 
     
-    
+    @EntityGraph(attributePaths = {"company"})
     @Query("""
-    	    SELECT j FROM Job j
-    	    LEFT JOIN j.company c
-    	    WHERE j.deleted = false
-    	    AND (
-    	        :keyword IS NULL
-    	        OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    	        OR LOWER(j.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    	        OR LOWER(j.industry) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    	        OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))
-    	    )
-    	    ORDER BY j.createdAt DESC
-    	""")
-    	Page<Job> searchJobs(
-    	        @Param("keyword") String keyword,
-    	        Pageable pageable
-    	);
+            SELECT j FROM Job j
+            LEFT JOIN j.company c
+            WHERE j.deleted = false
+            AND (
+                :keyword IS NULL
+                OR LOWER(j.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.location) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(j.industry) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                OR LOWER(c.companyName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+            )
+            ORDER BY j.createdAt DESC
+            """)
+    Page<Job> searchJobs(
+            @Param("keyword") String keyword,
+            Pageable pageable
+    );
     
-    
-    
+    @EntityGraph(attributePaths = {"company"})
+    Page<Job> findAll(Pageable pageable);
     
     
     // ================= ADMIN =================

@@ -29,6 +29,7 @@ public class JobApplicationResponse {
     private ApplicationSource applicationSource;
     private ApplicationStatus status;
     private LocalDateTime appliedAt;
+    private LocalDateTime updatedAt;
     
     // 🔹 External application link (only if source = EXTERNAL)
     private String externalApplicationUrl;

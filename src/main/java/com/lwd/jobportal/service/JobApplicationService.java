@@ -314,7 +314,7 @@ public class JobApplicationService {
                 .externalApplicationUrl(job != null ? job.getExternalApplicationUrl() : null)
                 .status(application.getStatus())
                 .appliedAt(application.getAppliedAt())
-
+                .updatedAt(application.getUpdatedAt())
                 .jobSeekerId(user != null ? user.getId() : null)
                 .jobSeeker(jobSeekerDTO)
 

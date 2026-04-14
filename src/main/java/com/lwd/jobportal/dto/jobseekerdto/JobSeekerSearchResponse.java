@@ -34,4 +34,12 @@ public class JobSeekerSearchResponse {
     
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    
+    private LocalDateTime resumeUploadedAt;
+    private LocalDateTime resumeUpdatedAt;
+    
+    // 🔥 Resume fields
+    private Long resumeId;
+    private String resumeUrl;
+    private Long resumeViewCount;
 }

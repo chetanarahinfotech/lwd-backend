@@ -5,43 +5,45 @@ import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
-
+import org.springframework.data.repository.query.Param;
+	
 import com.lwd.jobportal.pricing.entity.PlanFeature;
 import com.lwd.jobportal.pricing.enums.PlanType;
 
-public interface PlanFeatureRepository
-        extends JpaRepository<PlanFeature, Long> {
+public interface PlanFeatureRepository extends JpaRepository<PlanFeature, Long> {
 
-    // 🔥 Get specific feature
     @Query("""
-        SELECT pf FROM PlanFeature pf
+        SELECT pf
+        FROM PlanFeature pf
         JOIN FETCH pf.feature f
         WHERE pf.plan.id = :planId
-        AND f.code = :featureCode
+          AND f.code = :featureCode
+          AND f.planType = :planType
     """)
-    Optional<PlanFeature> findByPlanAndFeature(
-            Long planId,
-            String featureCode
+    Optional<PlanFeature> findByPlanIdAndFeatureCodeAndPlanTypeFetch(
+            @Param("planId") Long planId,
+            @Param("featureCode") String featureCode,
+            @Param("planType") PlanType planType
     );
 
-    // ⚡ Get all features for a plan (cache this)
     @Query("""
-        SELECT pf FROM PlanFeature pf
+        SELECT pf
+        FROM PlanFeature pf
         JOIN FETCH pf.feature f
         WHERE pf.plan.id = :planId
+          AND f.planType = :planType
     """)
-    List<PlanFeature> findAllByPlanId(Long planId);
-    
+    List<PlanFeature> findByPlanIdAndPlanTypeFetch(
+            @Param("planId") Long planId,
+            @Param("planType") PlanType planType
+    );
+
     Optional<PlanFeature> findByPlanIdAndFeatureId(Long planId, Long featureId);
-    
-    Optional<PlanFeature> findByPlanIdAndFeature_Code(Long planId, String code);
-    
-    List<PlanFeature> findByPlanIdAndFeature_PlanType(Long planId, PlanType planType);
 
-    Optional<PlanFeature> findByPlanIdAndFeature_CodeAndFeature_PlanType(
-            Long planId,
-            String code,
-            PlanType planType
-    );
-
+    @Query(""" 
+    		SELECT pf FROM PlanFeature pf 
+    		JOIN FETCH pf.feature f 
+    		WHERE pf.plan.id = :planId 
+    		""") 
+    List<PlanFeature> findAllByPlanId(Long planId);
 }

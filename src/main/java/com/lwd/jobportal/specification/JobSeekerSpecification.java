@@ -32,7 +32,6 @@ public class JobSeekerSpecification {
             Boolean immediateJoiner,
             LocalDate availableBefore
     ) {
-
         return (root, query, cb) -> {
 
             boolean isCountQuery = query.getResultType() == Long.class;
@@ -43,24 +42,21 @@ public class JobSeekerSpecification {
 
             query.distinct(true);
 
-            // JOIN USER
             Join<JobSeeker, User> userJoin = root.join("user", JoinType.LEFT);
-
-            // JOIN SKILLS ONLY WHEN NEEDED
             Join<JobSeeker, Skill> skillJoin = null;
+
+            // Fetch joins only when safe
+            if (!isCountQuery && !hasSkills) {
+                root.fetch("user", JoinType.LEFT);
+                root.fetch("skills", JoinType.LEFT);
+            }
 
             if (hasSkills) {
                 skillJoin = root.join("skills", JoinType.LEFT);
             }
 
-            // =================================
-            // KEYWORD SEARCH
-            // =================================
-
             if (hasKeyword) {
-
                 String pattern = "%" + keyword.toLowerCase() + "%";
-
                 predicates.add(
                         cb.or(
                                 cb.like(cb.lower(userJoin.get("name")), pattern),
@@ -71,140 +67,64 @@ public class JobSeekerSpecification {
                 );
             }
 
-            // =================================
-            // SKILL FILTER
-            // =================================
-
             if (hasSkills && skillJoin != null) {
+                List<String> normalizedSkills = skillNames.stream()
+                        .map(String::toLowerCase)
+                        .collect(Collectors.toList());
 
-                List<String> normalizedSkills =
-                        skillNames.stream()
-                                .map(String::toLowerCase)
-                                .collect(Collectors.toList());
-
-                predicates.add(
-                        cb.lower(skillJoin.get("name")).in(normalizedSkills)
-                );
+                predicates.add(cb.lower(skillJoin.get("name")).in(normalizedSkills));
             }
 
-            // =================================
-            // LOCATION
-            // =================================
-
             if (currentLocation != null && !currentLocation.isBlank()) {
-
                 predicates.add(
-                        cb.like(
-                                cb.lower(root.get("currentLocation")),
-                                "%" + currentLocation.toLowerCase() + "%"
-                        )
+                        cb.like(cb.lower(root.get("currentLocation")),
+                                "%" + currentLocation.toLowerCase() + "%")
                 );
             }
 
             if (preferredLocation != null && !preferredLocation.isBlank()) {
-
                 predicates.add(
-                        cb.like(
-                                cb.lower(root.get("preferredLocation")),
-                                "%" + preferredLocation.toLowerCase() + "%"
-                        )
+                        cb.like(cb.lower(root.get("preferredLocation")),
+                                "%" + preferredLocation.toLowerCase() + "%")
                 );
             }
 
-            // =================================
-            // EXPERIENCE
-            // =================================
-
             if (minExperience != null) {
-                predicates.add(
-                        cb.greaterThanOrEqualTo(
-                                root.get("totalExperience"),
-                                minExperience
-                        )
-                );
+                predicates.add(cb.greaterThanOrEqualTo(root.get("totalExperience"), minExperience));
             }
 
             if (maxExperience != null) {
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.get("totalExperience"),
-                                maxExperience
-                        )
-                );
+                predicates.add(cb.lessThanOrEqualTo(root.get("totalExperience"), maxExperience));
             }
 
-            // =================================
-            // CTC
-            // =================================
-
             if (minExpectedCTC != null) {
-
-                predicates.add(
-                        cb.greaterThanOrEqualTo(
-                                root.get("expectedCTC"),
-                                minExpectedCTC
-                        )
-                );
+                predicates.add(cb.greaterThanOrEqualTo(root.get("expectedCTC"), minExpectedCTC));
             }
 
             if (maxExpectedCTC != null) {
-
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.get("expectedCTC"),
-                                maxExpectedCTC
-                        )
-                );
+                predicates.add(cb.lessThanOrEqualTo(root.get("expectedCTC"), maxExpectedCTC));
             }
 
-            // =================================
-            // NOTICE
-            // =================================
-
             if (noticeStatus != null) {
-
-                predicates.add(
-                        cb.equal(root.get("noticeStatus"), noticeStatus)
-                );
+                predicates.add(cb.equal(root.get("noticeStatus"), noticeStatus));
             }
 
             if (maxNoticePeriod != null) {
-
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.get("noticePeriod"),
-                                maxNoticePeriod
-                        )
-                );
+                predicates.add(cb.lessThanOrEqualTo(root.get("noticePeriod"), maxNoticePeriod));
             }
 
             if (immediateJoiner != null) {
-
-                predicates.add(
-                        cb.equal(root.get("immediateJoiner"), immediateJoiner)
-                );
+                predicates.add(cb.equal(root.get("immediateJoiner"), immediateJoiner));
             }
 
             if (availableBefore != null) {
-
-                predicates.add(
-                        cb.lessThanOrEqualTo(
-                                root.get("availableFrom"),
-                                availableBefore
-                        )
-                );
+                predicates.add(cb.lessThanOrEqualTo(root.get("availableFrom"), availableBefore));
             }
 
-            // =================================
-            // SKILL RANKING
-            // =================================
-
             if (!isCountQuery && hasSkills && skillJoin != null) {
-
                 query.groupBy(root.get("id"));
 
-                Expression<Long> skillMatchCount =
-                        cb.count(skillJoin.get("id"));
+                Expression<Long> skillMatchCount = cb.countDistinct(skillJoin.get("id"));
 
                 query.orderBy(
                         cb.desc(skillMatchCount),

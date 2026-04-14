@@ -7,7 +7,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -35,6 +37,7 @@ public class SearchHistoryServiceImpl implements SearchHistoryService {
     private final ObjectMapper objectMapper;
 
     @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void saveSearchHistory(SaveSearchHistoryRequest request) {
         try {
             if (!isValidRequest(request)) {
@@ -132,6 +135,22 @@ public class SearchHistoryServiceImpl implements SearchHistoryService {
         return repository.findTop3ByUserIdAndRoleAndSearchTypeOrderByLastSeenAtDescIdDesc(userId, role, searchType)
                 .stream()
                 .limit(safeLimit)
+                .toList();
+    }
+    
+    @Override
+    @Transactional(readOnly = true)
+    public List<RecentSearchResponse> getRecentCandidateSearches(Long userId, Role role, int limit) {
+        int safeLimit = limit <= 0 ? 3 : Math.min(limit, 10);
+
+        return repository.findByUserIdAndRoleAndSearchTypeAndDeletedFalseOrderByLastSeenAtDescIdDesc(
+                        userId,
+                        role,
+                        SearchType.CANDIDATE,
+                        PageRequest.of(0, safeLimit)
+                )
+                .stream()
+                .map(this::toRecentSearchResponse)
                 .toList();
     }
 

@@ -54,4 +54,7 @@ public interface JobSeekerRepository extends
             WHERE js.user.id = :userId
            """)
     void updateProfileCompletion(Long userId, Integer percentage);
+
+	@EntityGraph(attributePaths = {"user", "skills"})
+	List<JobSeeker> findByIdIn(List<Long> ids);
 }

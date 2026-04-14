@@ -11,7 +11,9 @@ import com.lwd.jobportal.dto.jobseekerdto.JobSeekerSearchResponse;
 import com.lwd.jobportal.dto.jobseekerdto.ProfileCompletionDTO;
 import com.lwd.jobportal.dto.jobseekerdto.SkillResponseDTO;
 import com.lwd.jobportal.dto.jobseekerdto.SocialLinksDTO;
+import com.lwd.jobportal.dto.resume.ResumeViewCountProjection;
 import com.lwd.jobportal.entity.JobSeeker;
+import com.lwd.jobportal.entity.Resume;
 import com.lwd.jobportal.entity.Skill;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.NoticeStatus;
@@ -23,12 +25,19 @@ import com.lwd.jobportal.repository.JobSeekerExperienceRepository;
 import com.lwd.jobportal.repository.JobSeekerInternshipRepository;
 import com.lwd.jobportal.repository.JobSeekerProjectRepository;
 import com.lwd.jobportal.repository.JobSeekerRepository;
+import com.lwd.jobportal.repository.ResumeRepository;
+import com.lwd.jobportal.repository.ResumeViewHistoryRepository;
 import com.lwd.jobportal.repository.SkillRepository;
 import com.lwd.jobportal.repository.UserRepository;
+import com.lwd.jobportal.searchhistory.dto.SaveSearchHistoryRequest;
+import com.lwd.jobportal.searchhistory.enums.SearchModule;
+import com.lwd.jobportal.searchhistory.enums.SearchType;
+import com.lwd.jobportal.searchhistory.service.SearchHistoryService;
 import com.lwd.jobportal.security.SecurityUtils;
 import com.lwd.jobportal.specification.JobSeekerSpecification;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -41,12 +50,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -60,6 +72,9 @@ public class JobSeekerService {
     private final JobSeekerInternshipRepository internshipRepository;
     private final JobSeekerCertificationRepository certificationRepository;
     private final JobSeekerProjectRepository projectRepository;
+    private final ResumeRepository resumeRepository;
+    private final SearchHistoryService searchHistoryService;
+    private final ResumeViewHistoryRepository resumeViewHistoryRepository;
     
 
 
@@ -578,15 +593,11 @@ public class JobSeekerService {
 
     
     
-    
-    // =====================================================
-    // SEARCH JOBSEEKERS
-    // =====================================================
-    
+
+    @Transactional(readOnly = true)
     public PagedResponse<JobSeekerSearchResponse> searchJobSeekers(
             JobSeekerSearchRequest request
     ) {
-
         Specification<JobSeeker> specification =
                 JobSeekerSpecification.searchJobSeekers(
                         request.getKeyword(),
@@ -603,49 +614,165 @@ public class JobSeekerService {
                         request.getAvailableBefore()
                 );
 
-        Pageable pageable;
+        Pageable pageable = buildPageable(request);
+
+        Page<JobSeeker> page = jobSeekerRepository.findAll(specification, pageable);
+
+        saveJobSeekerSearchHistory(request, page.getTotalElements());
+
+        List<Long> seekerIds = page.getContent().stream()
+                .map(JobSeeker::getId)
+                .toList();
+
+        if (seekerIds.isEmpty()) {
+            return PaginationUtil.buildPagedResponse(page, Collections.emptyList());
+        }
+
+        List<JobSeeker> hydratedSeekers = jobSeekerRepository.findByIdIn(seekerIds);
+
+        Map<Long, JobSeeker> seekerMap = hydratedSeekers.stream()
+                .collect(Collectors.toMap(
+                        JobSeeker::getId,
+                        js -> js,
+                        (a, b) -> a,
+                        LinkedHashMap::new
+                ));
+
+        List<Long> userIds = hydratedSeekers.stream()
+                .map(JobSeeker::getUser)
+                .filter(Objects::nonNull)
+                .map(user -> user.getId())
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<Long, Resume> resumeByUserId = userIds.isEmpty()
+                ? Collections.emptyMap()
+                : resumeRepository.findByUserIdInAndIsDefaultTrueAndDeletedFalse(userIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                Resume::getUserId,
+                                resume -> resume,
+                                (r1, r2) -> {
+                                    // keep the latest updated resume if duplicates somehow exist
+                                    if (r1.getUpdatedAt() == null) return r2;
+                                    if (r2.getUpdatedAt() == null) return r1;
+                                    return r1.getUpdatedAt().isAfter(r2.getUpdatedAt()) ? r1 : r2;
+                                }
+                        ));
+        
+     // 🔥 STEP 1: Collect resumeIds
+        List<Long> resumeIds = resumeByUserId.values().stream()
+                .map(Resume::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        // 🔥 STEP 2: Fetch counts in ONE query
+        Map<Long, Long> resumeViewCountMap = resumeIds.isEmpty()
+                ? Collections.emptyMap()
+                : resumeViewHistoryRepository.countViewsByResumeIds(resumeIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        ResumeViewCountProjection::getResumeId,
+                        ResumeViewCountProjection::getViewCount
+                ));
+
+        List<JobSeekerSearchResponse> content = seekerIds.stream()
+                .map(seekerMap::get)
+                .filter(Objects::nonNull)
+                .map(js -> {
+                    Long userId = js.getUser() != null ? js.getUser().getId() : null;
+                    Resume resume = userId != null ? resumeByUserId.get(userId) : null;
+
+                    Long viewCount = 0L;
+                    if (resume != null) {
+                        viewCount = resumeViewCountMap.getOrDefault(resume.getId(), 0L);
+                    }
+
+                    return toSearchResponse(js, resume, viewCount);
+                })
+                .toList();
+
+        return PaginationUtil.buildPagedResponse(page, content);
+    }
+
+    private Pageable buildPageable(JobSeekerSearchRequest request) {
+        int page = request.getPage() != null && request.getPage() >= 0 ? request.getPage() : 0;
+        int size = request.getSize() != null && request.getSize() > 0 ? request.getSize() : 10;
 
         boolean hasSkills = request.getSkills() != null && !request.getSkills().isEmpty();
         boolean hasKeyword = request.getKeyword() != null && !request.getKeyword().isBlank();
 
         if (hasSkills || hasKeyword) {
-
-            pageable = PageRequest.of(
-                    request.getPage() != null ? request.getPage() : 0,
-                    request.getSize() != null ? request.getSize() : 10
-            );
-
-        } else {
-
-            Sort.Direction direction =
-                    request.getSortDirection() != null
-                            ? Sort.Direction.fromString(request.getSortDirection())
-                            : Sort.Direction.DESC;
-
-            String sortBy =
-                    request.getSortBy() != null
-                            ? request.getSortBy()
-                            : "totalExperience";
-
-            pageable = PageRequest.of(
-                    request.getPage() != null ? request.getPage() : 0,
-                    request.getSize() != null ? request.getSize() : 10,
-                    Sort.by(direction, sortBy)
-            );
+            return PageRequest.of(page, size);
         }
 
-        Page<JobSeeker> page =
-                jobSeekerRepository.findAll(specification, pageable);
+        Sort.Direction direction = Sort.Direction.DESC;
+        if (request.getSortDirection() != null && !request.getSortDirection().isBlank()) {
+            try {
+                direction = Sort.Direction.fromString(request.getSortDirection());
+            } catch (IllegalArgumentException ex) {
+                log.warn("Invalid sortDirection '{}', defaulting to DESC", request.getSortDirection());
+            }
+        }
 
-        List<JobSeekerSearchResponse> content =
-                page.stream()
-                        .map(this::toSearchResponse)
-                        .toList();
+        String sortBy = (request.getSortBy() != null && !request.getSortBy().isBlank())
+                ? request.getSortBy()
+                : "totalExperience";
 
-        return PaginationUtil.buildPagedResponse(page, content);
+        return PageRequest.of(page, size, Sort.by(direction, sortBy));
     }
 
+    private void saveJobSeekerSearchHistory(
+            JobSeekerSearchRequest request,
+            long totalResults
+    ) {
+        try {
+            Long userId = SecurityUtils.getUserId();
+            Role role = SecurityUtils.getRole();
 
+            if (userId == null || role == null) {
+                return;
+            }
+
+            Map<String, Object> filters = new LinkedHashMap<>();
+            filters.put("skills", request.getSkills());
+            filters.put("currentLocation", request.getCurrentLocation());
+            filters.put("preferredLocation", request.getPreferredLocation());
+            filters.put("minExperience", request.getMinExperience());
+            filters.put("maxExperience", request.getMaxExperience());
+            filters.put("minExpectedCTC", request.getMinExpectedCTC());
+            filters.put("maxExpectedCTC", request.getMaxExpectedCTC());
+            filters.put("noticeStatus",
+                    request.getNoticeStatus() != null ? request.getNoticeStatus().name() : null);
+            filters.put("maxNoticePeriod", request.getMaxNoticePeriod());
+            filters.put("immediateJoiner", request.getImmediateJoiner());
+            filters.put("availableBefore",
+                    request.getAvailableBefore() != null ? request.getAvailableBefore().toString() : null);
+            filters.put("sortBy", request.getSortBy());
+            filters.put("sortDirection", request.getSortDirection());
+
+            searchHistoryService.saveSearchHistory(
+                    SaveSearchHistoryRequest.builder()
+                            .userId(userId)
+                            .role(role)
+                            .module(SearchModule.CANDIDATES)
+                            .searchType(SearchType.CANDIDATE)
+                            .keyword(request.getKeyword())
+                            .filters(filters)
+                            .resultCount(safeLongToInt(totalResults))
+                            .sourcePage("/jobseekers")
+                            .build()
+            );
+
+        } catch (Exception e) {
+            log.warn("Failed to save job seeker search history", e);
+        }
+    }
+
+    private int safeLongToInt(long value) {
+        return value > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) value;
+    }
 
 
 
@@ -709,15 +836,13 @@ public class JobSeekerService {
     }
     
    
-    private JobSeekerSearchResponse toSearchResponse(JobSeeker jobSeeker) {
+    private JobSeekerSearchResponse toSearchResponse(JobSeeker jobSeeker, Resume resume, Long viewCount) {
 
-        // Get user info (already fetched)
         User user = jobSeeker.getUser();
 
-        // Map skill names (avoid N+1 by using fetched collection)
         List<String> skillNames = jobSeeker.getSkills() != null
                 ? jobSeeker.getSkills().stream()
-                    .map(skill -> skill.getName())
+                    .map(Skill::getName)
                     .toList()
                 : List.of();
 
@@ -733,11 +858,19 @@ public class JobSeekerService {
                 .immediateJoiner(jobSeeker.getImmediateJoiner())
                 .noticePeriod(jobSeeker.getNoticePeriod())
                 .skills(skillNames)
+
+                // resume fields
+                .resumeId(resume != null ? resume.getId() : null)
+                .resumeUploadedAt(resume != null ? resume.getUploadedAt() : null)
+                .resumeUpdatedAt(resume != null ? resume.getUpdatedAt() : null)
+                .resumeUrl(resume != null? resume.getSecureUrl() : null)
+
+                // profile fields
                 .createdAt(jobSeeker.getCreatedAt())
                 .updatedAt(jobSeeker.getUpdatedAt())
+                .resumeViewCount(viewCount)
                 .build();
     }
-
 
 
 }

@@ -58,17 +58,31 @@ public class SearchHistory {
     private Long userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 40)
+    @Column(
+        name = "role",
+        nullable = false,
+        columnDefinition = "ENUM('ADMIN','JOB_SEEKER','RECRUITER','RECRUITER_ADMIN','SUPER_ADMIN')"
+    )
     private Role role;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "module", nullable = false, length = 50)
+    @Column(
+        name = "module",
+        nullable = false,
+        length = 50,
+        columnDefinition = "ENUM('JOBS','CANDIDATES','APPLICATIONS','COMPANIES','USERS','RECRUITERS','GLOBAL_SEARCH','ADMIN_PANEL','RECRUITER_DASHBOARD','JOB_SEEKER_DASHBOARD')"
+    )
     private SearchModule module;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "search_type", nullable = false, length = 50)
+    @Column(
+        name = "search_type",
+        nullable = false,
+        length = 50,
+        columnDefinition = "ENUM('JOB','CANDIDATE','APPLICATION','COMPANY','USER','RECRUITER','SKILL','GLOBAL')"
+    )
     private SearchType searchType;
-
+    
     @Column(name = "keyword", length = 255)
     private String keyword;
 
