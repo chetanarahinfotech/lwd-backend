@@ -154,12 +154,7 @@ public class AuthService {
             throw new BadCredentialsException("Invalid email or password");
         }
 
-        String accessToken = jwtUtil.generateAccessToken(
-                user.getId(),
-                user.getEmail(),
-                user.getRole().name()
-        );
-
+        String accessToken = jwtUtil.generateAccessToken(user);
         String refreshToken = jwtUtil.generateRefreshToken(
                 user.getId(),
                 user.getEmail()
@@ -193,11 +188,7 @@ public class AuthService {
         RefreshToken storedToken = refreshTokenService.verifyStoredToken(token);
         User user = storedToken.getUser();
 
-        String newAccessToken = jwtUtil.generateAccessToken(
-                user.getId(),
-                user.getEmail(),
-                user.getRole().name()
-        );
+        String newAccessToken = jwtUtil.generateAccessToken(user);
 
         String newRefreshToken = jwtUtil.generateRefreshToken(
                 user.getId(),

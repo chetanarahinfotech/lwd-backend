@@ -1,5 +1,6 @@
 package com.lwd.jobportal.security;
 
+import com.lwd.jobportal.auth.dto.UserPrincipal;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.UserStatus;
 import com.lwd.jobportal.repository.UserRepository;
@@ -119,9 +120,18 @@ public class JwtFilter extends OncePerRequestFilter {
 
                 Long userId = jwtUtil.extractUserId(token);
 
+                UserPrincipal principal = UserPrincipal.builder()
+                        .userId(userId)
+                        .email(user.getEmail())
+                        .role(user.getRole())
+                        .status(user.getStatus())
+                        .emailVerified(user.isEmailVerified())
+                        .companyId(user.getCompany() != null ? user.getCompany().getId() : null)
+                        .build();
+
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                userId,
+                                principal,
                                 null,
                                 userDetails.getAuthorities()
                         );

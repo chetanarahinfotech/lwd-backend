@@ -24,27 +24,17 @@ public class SecurityUtils {
         return auth;
     }
 
-    // 🔥 Get UserId safely
     public static Long getUserId() {
-
         Object principal = getAuth().getPrincipal();
 
-        // ✅ Case 1: Proper UserPrincipal
         if (principal instanceof UserPrincipal user) {
             return user.getUserId();
         }
 
-        // ✅ Case 2: Direct Long (fallback)
         if (principal instanceof Long userId) {
             return userId;
         }
 
-        // ✅ Case 3: String (JWT subject)
-        if (principal instanceof String str) {
-            return Long.parseLong(str);
-        }
-
-     // ✅ Case 3: Numeric String only
         if (principal instanceof String str) {
             if ("anonymousUser".equals(str)) {
                 throw new RuntimeException("User not authenticated");
@@ -56,9 +46,27 @@ public class SecurityUtils {
                 throw new RuntimeException("Invalid principal. Expected userId but got: " + str);
             }
         }
+
+        throw new RuntimeException("Invalid principal type: " + principal);
+    }
+    
+    public static UserPrincipal getCurrentUser() {
+        Object principal = getAuth().getPrincipal();
+
+        if (principal instanceof UserPrincipal user) {
+            return user;
+        }
+
         throw new RuntimeException("Invalid principal type: " + principal);
     }
 
+    public static Long getCompanyId() {
+        return getCurrentUser().getCompanyId();
+    }
+
+    public static boolean isEmailVerified() {
+        return getCurrentUser().isEmailVerified();
+    }
 
     // 🔥 Role check (robust)
     public static boolean hasRole(Role role) {

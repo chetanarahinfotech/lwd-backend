@@ -3,6 +3,7 @@ package com.lwd.jobportal.util;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
+import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 
 import io.jsonwebtoken.Claims;
@@ -34,16 +36,16 @@ public class JwtUtil {
         this.refreshExpirationMs = refreshExpirationMs;
     }
 
-    public String generateAccessToken(Long userId, String email, String role) {
-        return buildToken(
-                Map.of(
-                        "userId", userId,
-                        "role", role,
-                        "type", "access"
-                ),
-                email,
-                accessExpirationMs
-        );
+    public String generateAccessToken(User user) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("userId", user.getId());
+        claims.put("role", user.getRole().name());
+        claims.put("status", user.getStatus() != null ? user.getStatus().name() : null);
+        claims.put("emailVerified", user.isEmailVerified());
+        claims.put("companyId", user.getCompany() != null ? user.getCompany().getId() : null);
+        claims.put("type", "access");
+
+        return buildToken(claims, user.getEmail(), accessExpirationMs);
     }
 
     public String generateRefreshToken(Long userId, String email) {
@@ -83,6 +85,22 @@ public class JwtUtil {
         return role != null ? Role.valueOf(role) : null;
     }
 
+    public String extractStatus(String token) {
+        return extractClaim(token, claims -> claims.get("status", String.class));
+    }
+
+    public Boolean extractEmailVerified(String token) {
+        return extractClaim(token, claims -> claims.get("emailVerified", Boolean.class));
+    }
+
+    public Long extractCompanyId(String token) {
+        Object value = extractClaim(token, claims -> claims.get("companyId"));
+        if (value == null) return null;
+        if (value instanceof Integer i) return i.longValue();
+        if (value instanceof Long l) return l;
+        return Long.valueOf(value.toString());
+    }
+
     public String extractTokenType(String token) {
         return extractClaim(token, claims -> claims.get("type", String.class));
     }
@@ -91,13 +109,16 @@ public class JwtUtil {
         return extractClaim(token, Claims::getExpiration);
     }
 
-    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
-        Claims claims = Jwts.parserBuilder()
+    public Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
                 .setSigningKey(signingKey)
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
+    }
 
+    public <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
+        Claims claims = extractAllClaims(token);
         return claimsResolver.apply(claims);
     }
 
