@@ -1,8 +1,8 @@
 package com.lwd.jobportal.repository;
 
-import com.lwd.jobportal.dto.resume.ResumeViewCountProjection;
 import com.lwd.jobportal.entity.ResumeViewHistory;
 import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.resume.ResumeViewCountProjection;
 
 import java.util.List;
 

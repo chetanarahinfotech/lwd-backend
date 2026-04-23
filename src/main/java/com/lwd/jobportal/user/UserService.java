@@ -1,0 +1,76 @@
+package com.lwd.jobportal.user;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.exception.ResourceNotFoundException;
+import com.lwd.jobportal.repository.UserRepository;
+import com.lwd.jobportal.service.UserActivityService;
+
+import lombok.RequiredArgsConstructor;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class UserService {
+
+    private final UserRepository userRepository;
+    private final UserActivityService userActivityService;
+
+    // ✅ Update logged-in or admin-managed user profile
+    public UserResponse updateUser(Long userId, UpdateUserRequest request) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        if (request.getName() != null) {
+            user.setName(request.getName());
+        }
+
+        if (request.getPhone() != null) {
+            user.setPhone(request.getPhone());
+        }
+
+        if (request.getIsActive() != null) {
+            user.setIsActive(request.getIsActive());
+        }
+
+        return mapToResponse(user);
+    }
+
+    // ✅ Fetch user profile
+    public UserResponse getUserById(Long userId) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+        return mapToResponse(user);
+    }
+
+    // ✅ Convert Entity → DTO
+    private UserResponse mapToResponse(User user) {
+
+        boolean active = userActivityService.isUserActive(user.getId());
+
+        return UserResponse.builder()
+                .id(user.getId())
+                .name(user.getName())
+                .email(user.getEmail())
+                .role(user.getRole())
+                .phone(user.getPhone())
+                .isActive(active) // realtime active status
+                .lastActiveAt(user.getLastActiveAt())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .companyName(
+                        user.getCompany() != null ?
+                                user.getCompany().getCompanyName() : null
+                )
+                .companyId(
+                        user.getCompany() != null ?
+                                user.getCompany().getId() : null
+                )
+                .build();
+    }
+}

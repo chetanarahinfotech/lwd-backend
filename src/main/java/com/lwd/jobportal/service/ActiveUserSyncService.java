@@ -1,7 +1,6 @@
 package com.lwd.jobportal.service;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.scheduling.annotation.Scheduled;
@@ -10,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.lwd.jobportal.repository.UserRepository;
 
 import jakarta.transaction.Transactional;
+
 @Service
 public class ActiveUserSyncService {
 
@@ -22,17 +22,18 @@ public class ActiveUserSyncService {
         this.activityService = activityService;
     }
 
-    // Run every 1 hour
-    @Scheduled(fixedRate = 3600000)
+
+    // every 5 minutes
+    @Scheduled(cron = "0 */5 * * * *")
     @Transactional
     public void syncActiveUsers() {
 
         Map<Long, Long> activeUsers = activityService.getActiveUsers();
 
-        if (activeUsers.isEmpty()) return;
+        if (activeUsers.isEmpty()) {
+            return;
+        }
 
-        List<Long> userIds = new ArrayList<>(activeUsers.keySet());
-
-        userRepository.updateUsersLastActive(userIds);
+        userRepository.updateUsersLastActive(new ArrayList<>(activeUsers.keySet()));
     }
 }

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 import com.lwd.jobportal.entity.Job;
 import com.lwd.jobportal.enums.JobStatus;
+import com.lwd.jobportal.job.RecentJobDTO;
 import com.lwd.jobportal.specification.IndustryCount;
 
 @Repository
@@ -29,6 +30,8 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
 	
     Page<Job> findByCreatedById(Long userId, Pageable pageable);
     
+    
+    ///==============================
     long countByCompanyId(Long companyId);
     
     @EntityGraph(attributePaths = {
@@ -172,10 +175,32 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     
     long countByStatus(JobStatus status);
     long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
-    long countByCompanyIdAndStatus(Long companyId, JobStatus status);
+    
     long countByCreatedByIdAndStatus(Long recruiterId, JobStatus status);
-    List<Job> findTop5ByOrderByCreatedAtDesc();
     List<Job> findByCompanyIdOrderByCreatedAtDesc(Long companyId, Pageable pageable);
+
+    long countByCompanyIdAndStatus(Long companyId, JobStatus status);
+
+    @Query("""
+        SELECT new com.lwd.jobportal.job.RecentJobDTO(
+            j.title,
+            c.companyName,
+            j.location,
+            j.industry,
+            j.createdAt,
+            j.status
+        )
+        FROM Job j
+        JOIN j.company c
+        WHERE c.id = :companyId
+        ORDER BY j.createdAt DESC
+    """)
+    List<RecentJobDTO> findRecentJobsByCompanyId(
+            @Param("companyId") Long companyId,
+            Pageable pageable
+    );
+    
+    List<Job> findTop5ByOrderByCreatedAtDesc();
     List<Job> findByCreatedByIdOrderByCreatedAtDesc(Long recruiterId, Pageable pageable);
     
     @Query("SELECT j FROM Job j WHERE j.expiresAt BETWEEN :now AND :weekLater")
@@ -195,6 +220,8 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     @Query("SELECT j.industry, COUNT(j) FROM Job j GROUP BY j.industry")
     List<Object[]> countJobsPerIndustry();
 
+    
+    //=====              =========
     long countByCreatedById(Long recruiterId);
     
     @EntityGraph(attributePaths = {"company"})
@@ -206,6 +233,15 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
     }
     
     
+//    
+//    @EntityGraph(attributePaths = {"company"})
+//    @Query("""
+//        SELECT j
+//        FROM Job j
+//        WHERE j.createdBy.id = :recruiterId
+//        ORDER BY j.createdAt DESC
+//    """)
+//    List<Job> findByCreatedById(@Param("recruiterId") Long recruiterId);
     
     @Query("""
     	    SELECT j FROM Job j
@@ -257,7 +293,7 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
            """)
     Page<Job> searchAllJobs(@Param("keyword") String keyword, Pageable pageable);
 
-    // ================= RECRUITER_ADMIN =================
+    // ================= COMPANY_ADMIN =================
     @Query("""
            SELECT j FROM Job j
            WHERE j.company.id = :companyId
@@ -285,6 +321,14 @@ public interface JobRepository extends JpaRepository<Job, Long>, JpaSpecificatio
                                   @Param("keyword") String keyword,
                                   Pageable pageable);
 
+
+    @Query("""
+		    SELECT j.company.id, COUNT(j.id)
+		    FROM Job j
+		    WHERE j.company.id IN :companyIds
+		    GROUP BY j.company.id
+		    		""")
+    List<Object[]> countJobsByCompanyIds(@Param("companyIds") List<Long> companyIds);
 
 
 }

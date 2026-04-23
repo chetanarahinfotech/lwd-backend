@@ -56,12 +56,8 @@ public class ResumeViewHistory {
     private Long viewerId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "viewer_role", 
-    		nullable = false, 
-    		length = 30,
-    		columnDefinition = "ENUM('ADMIN','JOB_SEEKER','RECRUITER','RECRUITER_ADMIN','SUPER_ADMIN')"
-    )
-    private Role viewerRole;
+    @Column(name = "viewer_role", nullable = false, length = 30)
+    private Role viewerRole;	
 
     @Column(name = "job_id")
     private Long jobId;

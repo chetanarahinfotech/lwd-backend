@@ -20,6 +20,7 @@ import com.lwd.jobportal.entity.Company;
 import com.lwd.jobportal.entity.User;
 import com.lwd.jobportal.enums.Role;
 import com.lwd.jobportal.enums.UserStatus;
+import com.lwd.jobportal.recruiter.RecruiterPerformanceDTO;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificationExecutor<User> {
@@ -38,11 +39,12 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
     
     @Modifying
     @Query("""
-    UPDATE User u
-    SET u.lastActiveAt = CURRENT_TIMESTAMP
-    WHERE u.id IN :userIds
+        UPDATE User u
+        SET u.lastActiveAt = CURRENT_TIMESTAMP,
+            u.isActive = true
+        WHERE u.id IN :userIds
     """)
-    void updateUsersLastActive(@Param("userIds") List<Long> userIds);
+    int updateUsersLastActive(@Param("userIds") List<Long> userIds);
 
 
     @Modifying
@@ -77,8 +79,33 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 	 
 	long countByRole(Role role);
 	long countByCreatedAtBetween(LocalDateTime start, LocalDateTime end);
-	long countByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
+	
 	List<User> findByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
+	long countByCompanyIdAndRoleIn(Long companyId, Collection<Role> roles);
+	
+	@EntityGraph(attributePaths = {"company"})
+	Optional<User> findWithCompanyById(Long id);
+	
+	@Query("""
+		    SELECT new com.lwd.jobportal.recruiter.RecruiterPerformanceDTO(
+		        u.id,
+		        u.name,
+		        COUNT(DISTINCT j.id),
+		        COUNT(DISTINCT ja.id),
+		        COUNT(DISTINCT CASE WHEN j.status = com.lwd.jobportal.enums.JobStatus.OPEN THEN j.id END)
+		    )
+		    FROM User u
+		    LEFT JOIN Job j ON j.createdBy.id = u.id
+		    LEFT JOIN JobApplication ja ON ja.job.createdBy.id = u.id
+		    WHERE u.company.id = :companyId
+		      AND u.role IN :roles
+		    GROUP BY u.id, u.name
+		    ORDER BY u.name ASC
+		""")
+		List<RecruiterPerformanceDTO> findRecruiterPerformanceByCompanyId(
+		        @Param("companyId") Long companyId,
+		        @Param("roles") Collection<Role> roles
+		);
 	
 	@Query("SELECT u FROM User u WHERE u.role = 'JOB_SEEKER'")
 	Page<User> findJobSeekers(Pageable pageable);
@@ -88,7 +115,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 	List<User> findTop5ByOrderByCreatedAtDesc();
 
 	@EntityGraph(attributePaths = {"company"})
-	@Query("SELECT u FROM User u WHERE u.role IN ('RECRUITER','RECRUITER_ADMIN')")
+	@Query("SELECT u FROM User u WHERE u.role IN ('RECRUITER','COMPANY_ADMIN')")
 	Page<User> findRecruiters(Pageable pageable);
 	
 	@Query("SELECT u FROM User u ORDER BY u.createdAt DESC")
@@ -115,7 +142,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 			SELECT u FROM User u
 			LEFT JOIN u.company c
 			WHERE (u.role = com.lwd.jobportal.enums.Role.RECRUITER 
-			   OR u.role = com.lwd.jobportal.enums.Role.RECRUITER_ADMIN)
+			   OR u.role = com.lwd.jobportal.enums.Role.COMPANY_ADMIN)
 			AND (
 			    LOWER(u.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
 			    OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%'))
@@ -146,7 +173,7 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 		    LEFT JOIN u.company c
 		    WHERE (
 		        u.role = com.lwd.jobportal.enums.Role.RECRUITER
-		        OR u.role = com.lwd.jobportal.enums.Role.RECRUITER_ADMIN
+		        OR u.role = com.lwd.jobportal.enums.Role.COMPANY_ADMIN
 		    )
 		    AND (
 		        LOWER(u.name) LIKE LOWER(CONCAT(:keyword, '%'))
@@ -160,6 +187,16 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 		        @Param("keyword") String keyword,
 		        Pageable pageable
 		);
+
+	@Query("""
+		    SELECT u.company.id, COUNT(u.id)
+		    FROM User u
+		    WHERE u.company.id IN :companyIds
+		      AND u.role = :role
+		    GROUP BY u.company.id
+		""")
+		List<Object[]> countByCompanyIdsAndRole(@Param("companyIds") List<Long> companyIds,
+		                                        @Param("role") Role role);
 
 
 

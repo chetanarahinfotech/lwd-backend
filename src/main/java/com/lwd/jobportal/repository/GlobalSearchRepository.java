@@ -4,10 +4,9 @@ import java.util.List;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-
-import com.lwd.jobportal.dto.search.GlobalSuggestionProjection;
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.lwd.jobportal.entity.Job;
+import com.lwd.jobportal.search.GlobalSuggestionProjection;
 
 public interface GlobalSearchRepository extends JpaRepository<Job, Long> {
 

@@ -1,0 +1,30 @@
+package com.lwd.jobportal.jobseeker;
+
+import com.lwd.jobportal.enums.NoticeStatus;
+import lombok.*;
+
+import java.time.LocalDate;
+
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class JobSeekerRequestDTO {
+
+    private NoticeStatus noticeStatus;
+    private Boolean isServingNotice;
+    private LocalDate lastWorkingDay;
+    private Integer noticePeriod;
+    private LocalDate availableFrom;
+    private Boolean immediateJoiner;
+
+    private String currentCompany;
+    private Double currentCTC;
+    private Double expectedCTC;
+
+    private String currentLocation;
+    private String preferredLocation;
+    private Integer totalExperience;
+    private String resumeUrl;
+}

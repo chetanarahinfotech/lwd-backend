@@ -1,8 +1,5 @@
 package com.lwd.jobportal.security;
 
-
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -22,34 +19,16 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
-    public UserDetails loadUserByUsername(String email)
-            throws UsernameNotFoundException {
-
+    public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() ->
-                        new UsernameNotFoundException("User not found with email: " + email));
-
-        // ❌ Not approved
-        if (user.getStatus() != UserStatus.ACTIVE) {
-            throw new DisabledException("Account is not active yet");
-        }
-
-        // ❌ Locked by admin
-        if (user.isLocked()) {
-            throw new LockedException(
-                    "Account is locked by administrator"
-            );
-        }
+                .orElseThrow(() -> new UsernameNotFoundException("Invalid email or password"));
 
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())
                 .password(user.getPassword())
                 .authorities("ROLE_" + user.getRole().name())
                 .accountLocked(user.isLocked())
-                .disabled(user.getStatus() != UserStatus.ACTIVE)
+                .disabled(Boolean.FALSE.equals(user.getIsActive()) || user.getStatus() != UserStatus.ACTIVE)
                 .build();
     }
-
-
-
 }

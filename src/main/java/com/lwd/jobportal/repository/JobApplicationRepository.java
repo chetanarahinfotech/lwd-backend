@@ -3,6 +3,7 @@ package com.lwd.jobportal.repository;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -14,7 +15,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import com.lwd.jobportal.dto.jobdto.JobStatsDTO;
 import com.lwd.jobportal.entity.JobApplication;
 import com.lwd.jobportal.enums.ApplicationStatus;
 
@@ -32,6 +32,9 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
             Long companyId,
             Pageable pageable
     );
+    
+    @EntityGraph(attributePaths = {"job", "jobSeeker"})
+    Optional<JobApplication> findWithJobAndJobSeekerById(Long id);
     
     
     @EntityGraph(attributePaths = {
@@ -65,7 +68,7 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     	})
     	Page<JobApplication> findAll(Pageable pageable);
 
-    // RECRUITER_ADMIN → company jobs
+    // COMPANY_ADMIN → company jobs
     @EntityGraph(attributePaths = {
             "job",
             "job.company",
@@ -139,6 +142,7 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     	List<Object[]> countApplicationsForJobs(List<Long> jobIds);
     
     long countByAppliedAtBetween(LocalDateTime start, LocalDateTime end);
+    //=             =======================
     long countByJobCompanyId(Long companyId);
     long countByJobCreatedById(Long recruiterId);
     
@@ -148,11 +152,20 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     
     List<JobApplication> findTop5ByOrderByAppliedAtDesc();
     
-    // funnel queries for company
-    @Query("SELECT ja.status, COUNT(ja) FROM JobApplication ja WHERE ja.job.company.id = :companyId GROUP BY ja.status")
-    List<Object[]> countByStatusForCompany(Long companyId);
+   
     
+    //====================================
     long countByJobCreatedByIdAndStatus(Long recruiterId, ApplicationStatus status);
+
+    @Query("""
+        SELECT ja.status, COUNT(ja)
+        FROM JobApplication ja
+        WHERE ja.job.company.id = :companyId
+        GROUP BY ja.status
+    """)
+    List<Object[]> countByStatusForCompany(@Param("companyId") Long companyId);
+    
+    //=============================
     long countByJobId(Long jobId);
     long countByJobIdAndStatus(Long jobId, ApplicationStatus status);
     long countByJobIdAndStatusIn(Long jobId, Collection<ApplicationStatus> statuses);
@@ -165,6 +178,25 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
         return findAllOrderByAppliedAtDesc(PageRequest.of(0, size)).getContent();
     }
     
+    
+    @Query("""
+    	    SELECT
+    	        ja.job.id,
+    	        COUNT(ja),
+    	        SUM(CASE WHEN ja.status = com.lwd.jobportal.enums.ApplicationStatus.SHORTLISTED THEN 1 ELSE 0 END),
+    	        SUM(CASE WHEN ja.status = com.lwd.jobportal.enums.ApplicationStatus.REJECTED THEN 1 ELSE 0 END),
+    	        SUM(CASE WHEN ja.status IN (
+    	            com.lwd.jobportal.enums.ApplicationStatus.APPLIED,
+    	            com.lwd.jobportal.enums.ApplicationStatus.INTERVIEW_SCHEDULED
+    	        ) THEN 1 ELSE 0 END),
+    	        SUM(CASE WHEN ja.status = com.lwd.jobportal.enums.ApplicationStatus.INTERVIEW_SCHEDULED THEN 1 ELSE 0 END)
+    	    FROM JobApplication ja
+    	    WHERE ja.job.id IN :jobIds
+    	    GROUP BY ja.job.id
+    	""")
+    	List<Object[]> getJobStatsForJobIds(@Param("jobIds") List<Long> jobIds);
+    
+    //==========
     @EntityGraph(attributePaths = {"job", "jobSeeker"})
     @Query("""
         SELECT ja
@@ -173,6 +205,7 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
         ORDER BY ja.appliedAt DESC
     """)
     List<JobApplication> findRecentApplicationsByRecruiterId(Long recruiterId, Pageable pageable);
+
   
 
 }

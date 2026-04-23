@@ -1,39 +1,58 @@
 package com.lwd.jobportal.util;
 
-import com.auth0.jwt.JWT;
-import com.auth0.jwt.algorithms.Algorithm;
-import com.auth0.jwt.interfaces.DecodedJWT;
+import io.jsonwebtoken.*;
+import io.jsonwebtoken.security.Keys;
 
+import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
 public class EmailVerificationTokenUtil {
 
-    private static final String SECRET_KEY = "lwd-email-verification-secret";
+    private static final String SECRET =
+            "4TW+HJFoJ4RMylPoMhVDzxLx8w4ih8nYmAHZ67fNmpA=";
+    private static final long EXPIRATION_MS = 1000 * 60 * 60 * 24; // 24 hours
 
-    // 24 hours expiry
-    private static final long EXPIRATION_TIME = 24 * 60 * 60 * 1000;
+    private static final SecretKey KEY =
+            Keys.hmacShaKeyFor(SECRET.getBytes(StandardCharsets.UTF_8));
 
-    /**
-     * Generate verification token
-     */
-    public static String generateToken(String email) {
-
-        return JWT.create()
-                .withSubject(email)
-                .withIssuedAt(new Date())
-                .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
-                .sign(Algorithm.HMAC256(SECRET_KEY));
+    private EmailVerificationTokenUtil() {
     }
 
-    /**
-     * Extract email from token
-     */
+    public static String generateToken(String email) {
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + EXPIRATION_MS);
+
+        return Jwts.builder()
+                .setSubject(email)
+                .setIssuedAt(now)
+                .setExpiration(expiry)
+                .signWith(KEY, SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     public static String extractEmail(String token) {
+        return extractAllClaims(token).getSubject();
+    }
 
-        DecodedJWT jwt = JWT.require(Algorithm.HMAC256(SECRET_KEY))
+    public static boolean isTokenValid(String token, String email) {
+        try {
+            String extractedEmail = extractEmail(token);
+            return extractedEmail.equalsIgnoreCase(email) && !isTokenExpired(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean isTokenExpired(String token) {
+        return extractAllClaims(token).getExpiration().before(new Date());
+    }
+
+    private static Claims extractAllClaims(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(KEY)
                 .build()
-                .verify(token);
-
-        return jwt.getSubject();
+                .parseClaimsJws(token)
+                .getBody();
     }
 }

@@ -3,7 +3,7 @@ package com.lwd.jobportal.pricing.annotation;
 import java.lang.annotation.*;
 
 import com.lwd.jobportal.enums.Role;
-import com.lwd.jobportal.pricing.enums.PlanName;
+import com.lwd.jobportal.pricing.PlanName;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)

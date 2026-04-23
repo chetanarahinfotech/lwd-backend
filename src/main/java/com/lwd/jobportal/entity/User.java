@@ -65,7 +65,7 @@ public class User {
     private Role role;
     
     @Enumerated(EnumType.STRING)
-    private UserStatus status; // PENDING, ACTIVE, BLOCKED
+    private UserStatus status; //  PENDING_APPROVAL, ACTIVE, SUSPENDED
 
     @Column(length = 15)
     private String phone;

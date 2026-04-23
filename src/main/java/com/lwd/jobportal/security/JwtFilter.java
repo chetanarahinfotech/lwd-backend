@@ -1,27 +1,52 @@
 package com.lwd.jobportal.security;
 
-import com.lwd.jobportal.enums.Role;
+import com.lwd.jobportal.entity.User;
+import com.lwd.jobportal.enums.UserStatus;
+import com.lwd.jobportal.repository.UserRepository;
+import com.lwd.jobportal.util.JwtUtil;
+
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.List;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final CustomUserDetailsService customUserDetailsService;
+    private final UserRepository userRepository;
 
-    public JwtFilter(JwtUtil jwtUtil) {
+    public JwtFilter(
+            JwtUtil jwtUtil,
+            CustomUserDetailsService customUserDetailsService,
+            UserRepository userRepository
+    ) {
         this.jwtUtil = jwtUtil;
+        this.customUserDetailsService = customUserDetailsService;
+        this.userRepository = userRepository;
+    }
+
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getServletPath();
+
+        return path.equals("/api/auth/login")
+                || path.equals("/api/auth/register")
+                || path.equals("/api/auth/refresh")
+                || path.equals("/api/auth/forgot-password")
+                || path.equals("/api/auth/reset-password");
     }
 
     @Override
@@ -31,7 +56,6 @@ public class JwtFilter extends OncePerRequestFilter {
             FilterChain filterChain
     ) throws ServletException, IOException {
 
-        // Allow CORS preflight requests directly
         if (HttpMethod.OPTIONS.matches(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
@@ -39,7 +63,6 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String authHeader = request.getHeader("Authorization");
 
-        // No token -> continue for public APIs
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             filterChain.doFilter(request, response);
             return;
@@ -48,26 +71,93 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = authHeader.substring(7);
 
         try {
-            Long userId = jwtUtil.extractUserId(token);
-            Role role = jwtUtil.extractRole(token);
+            String username = jwtUtil.extractUsername(token);
 
-            if (userId != null && role != null &&
+            if (username != null &&
                     SecurityContextHolder.getContext().getAuthentication() == null) {
+
+                String tokenType = jwtUtil.extractTokenType(token);
+                if (!"access".equals(tokenType)) {
+                    writeAuthError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                            "Invalid token type. Access token required.");
+                    return;
+                }
+
+                User user = userRepository.findByEmail(username)
+                        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+                // ✅ force logout checks on every request
+                if (user.isLocked()) {
+                    SecurityContextHolder.clearContext();
+                    writeAuthError(response, HttpStatus.LOCKED.value(),
+                            "Your account is locked. Contact administrator.");
+                    return;
+                }
+
+                if (Boolean.FALSE.equals(user.getIsActive()) || user.getStatus() == UserStatus.SUSPENDED) {
+                    SecurityContextHolder.clearContext();
+                    writeAuthError(response, HttpServletResponse.SC_FORBIDDEN,
+                            "Your account is suspended. Contact administrator.");
+                    return;
+                }
+
+                if (user.getStatus() == UserStatus.PENDING_APPROVAL) {
+                    SecurityContextHolder.clearContext();
+                    writeAuthError(response, HttpServletResponse.SC_FORBIDDEN,
+                            "Your account is pending approval.");
+                    return;
+                }
+
+                UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+
+                if (!jwtUtil.validateAccessToken(token, userDetails)) {
+                    SecurityContextHolder.clearContext();
+                    writeAuthError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                            "Authentication required or token expired.");
+                    return;
+                }
+
+                Long userId = jwtUtil.extractUserId(token);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userId,
                                 null,
-                                List.of(new SimpleGrantedAuthority("ROLE_" + role.name()))
+                                userDetails.getAuthorities()
                         );
+
+                authentication.setDetails(
+                        new WebAuthenticationDetailsSource().buildDetails(request)
+                );
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
-        } catch (Exception e) {
-            // Clear context if token is invalid
+
+        } catch (UsernameNotFoundException e) {
             SecurityContextHolder.clearContext();
+            writeAuthError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                    "Authentication required or token expired.");
+            return;
+
+        } catch (Exception e) {
+            SecurityContextHolder.clearContext();
+            writeAuthError(response, HttpServletResponse.SC_UNAUTHORIZED,
+                    "Authentication required or token expired.");
+            return;
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    private void writeAuthError(HttpServletResponse response, int status, String message)
+            throws IOException {
+
+        response.setStatus(status);
+        response.setContentType("application/json");
+        response.setCharacterEncoding("UTF-8");
+
+        response.getWriter().write(
+                "{\"success\":false,\"message\":\"" + message + "\"}"
+        );
     }
 }

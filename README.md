@@ -53,7 +53,7 @@ Register, login, manage profile, search jobs, apply for jobs, and track applicat
 **🧑‍💼 RECRUITER**  
 Manage recruiter profile, post jobs, manage job listings, and view applicants.
 
-**🏢 RECRUITER_ADMIN**  
+**🏢 COMPANY_ADMIN**  
 Manage recruiters within company, approve recruiter actions, and handle company-level control.
 
 **🛠️ ADMIN**  
@@ -350,7 +350,7 @@ npm run dev
 - `/api/users` → User profile APIs
 - `/api/job-seekers` → Job seeker profile APIs
 - `/api/recruiter` → Recruiter APIs
-- `/api/recruiter-admin` → Recruiter admin APIs
+- `/api/company-admin` → Recruiter admin APIs
 - `/api/admin` → Admin APIs
 - `/api/super-admin` → Super admin APIs
 - `/api/jobs` → Job APIs

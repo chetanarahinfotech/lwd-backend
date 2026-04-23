@@ -20,19 +20,14 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws-chat")
-                .setAllowedOriginPatterns("*") // restrict in production
+                .setAllowedOriginPatterns("*")
                 .withSockJS();
     }
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // For private user queues and pub/sub topics
         registry.enableSimpleBroker("/queue", "/topic");
-
-        // Client sends to @MessageMapping endpoints using /app prefix
         registry.setApplicationDestinationPrefixes("/app");
-
-        // User destination prefix
         registry.setUserDestinationPrefix("/user");
     }
 

@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     @Bean
-    public OpenAPI lwdOpenAPI() {
+    OpenAPI lwdOpenAPI() {
         return new OpenAPI()
                 .info(new Info()
                         .title("LWD Job Portal API")
