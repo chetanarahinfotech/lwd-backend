@@ -24,6 +24,8 @@ public class EmailVerificationService {
 
     @Autowired
     private EmailService emailService;
+    
+    private EmailVerificationTokenUtil tokenUtil;
 
     @Autowired
     private EmailRateLimiterService rateLimiter;
@@ -38,7 +40,8 @@ public class EmailVerificationService {
         }
 
         String email = user.getEmail().trim().toLowerCase();
-        String token = EmailVerificationTokenUtil.generateToken(email);
+
+        String token = tokenUtil.generateToken(email);
 
         emailService.sendVerificationEmail(email, token);
     }
@@ -69,7 +72,7 @@ public class EmailVerificationService {
             return false;
         }
 
-        String token = EmailVerificationTokenUtil.generateToken(email);
+        String token = tokenUtil.generateToken(email);
         emailService.sendVerificationEmail(email, token);
 
         log.info("Verification email resent to {}", email);
@@ -85,7 +88,7 @@ public class EmailVerificationService {
 
         try {
             String token = request.getToken().trim();
-            String email = EmailVerificationTokenUtil.extractEmail(token);
+            String email = tokenUtil.extractEmail(token);
 
             if (email == null || email.isBlank()) {
                 log.warn("Verification failed: extracted email is empty");
@@ -103,7 +106,7 @@ public class EmailVerificationService {
 
             User user = userOpt.get();
 
-            if (!EmailVerificationTokenUtil.isTokenValid(token, email)) {
+            if (!tokenUtil.isTokenValid(token, email)) {
                 log.warn("Verification failed: invalid or expired token for {}", email);
                 return false;
             }

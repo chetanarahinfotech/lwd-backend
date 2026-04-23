@@ -7,7 +7,6 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.MailException;
 import org.springframework.stereotype.Service;
-
 @Service
 @Slf4j
 public class EmailService {
@@ -15,8 +14,11 @@ public class EmailService {
     @Autowired
     private JavaMailSender mailSender;
 
-    @Value("${app.frontend.base-url:http://localhost:5173}")
+    @Value("${app.frontend.base-url}")
     private String frontendBaseUrl;
+
+    @Value("${spring.mail.username}")
+    private String fromEmail;
 
     public void sendVerificationEmail(String toEmail, String token) {
         String subject = "Verify your LWD account";
@@ -45,14 +47,16 @@ public class EmailService {
     public void sendEmail(String toEmail, String subject, String body) {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
+            message.setFrom(fromEmail);
             message.setTo(toEmail);
             message.setSubject(subject);
             message.setText(body);
 
             mailSender.send(message);
+            log.info("Email sent successfully to {}", toEmail);
         } catch (MailException e) {
-            log.error("Failed to send email to {}", toEmail, e);
-            throw new RuntimeException("Unable to send email at the moment. Please try again later.");
+            log.error("Failed to send email to {}. Error: {}", toEmail, e.getMessage(), e);
+            throw new RuntimeException("Unable to send email at the moment. Please try again later.", e);
         }
     }
 }
