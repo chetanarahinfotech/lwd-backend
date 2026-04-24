@@ -2,9 +2,6 @@ package com.lwd.jobportal.auth;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
-import org.springframework.security.authentication.InternalAuthenticationServiceException;
-import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -55,7 +52,11 @@ public class AuthService {
                 .isActive(true)
                 .build();
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        emailVerificationService.createAndSendToken(savedUser);
+
+        return savedUser;
     }
 
     // ================= REGISTER RECRUITER =================
@@ -77,7 +78,11 @@ public class AuthService {
                 .isActive(true)
                 .build();
 
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        emailVerificationService.createAndSendToken(savedUser);
+
+        return savedUser;
     }
 
     @Transactional
@@ -107,9 +112,13 @@ public class AuthService {
     }
     
     
-    
     @Transactional
-    public AuthResponse login(String email, String password, String deviceInfo, String ipAddress) {
+    public AuthResponse login(String email,
+                              String password,
+                              String deviceId,
+                              String deviceInfo,
+                              String ipAddress) {
+
         String normalizedEmail = normalizeEmail(email);
 
         if (normalizedEmail == null || normalizedEmail.isBlank()) {
@@ -123,44 +132,42 @@ public class AuthService {
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
-        // ✅ Business/account state checks first
+        // Account checks
         if (user.isLocked()) {
-            throw new AccountLockedException("Your account is locked. Contact administrator.");
+            throw new AccountLockedException("Your account is locked.");
+        }
+        
+        if (!user.isEmailVerified()) {
+            throw new AccountDisabledException("Please verify your email before logging in.");
         }
 
         if (Boolean.FALSE.equals(user.getIsActive()) || user.getStatus() == UserStatus.SUSPENDED) {
-            throw new AccountDisabledException("Your account is suspended. Contact administrator.");
+            throw new AccountDisabledException("Your account is suspended.");
         }
 
         if (user.getStatus() == UserStatus.PENDING_APPROVAL) {
             throw new AccountDisabledException("Your account is pending approval.");
         }
         
-//        if (user.getRole() == Role.COMPANY_ADMIN && !user.isEmailVerified()) {
-//            throw new AccountDisabledException("Please verify your email before logging in.");
-//        }
-
-        try {
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(normalizedEmail, password)
-            );
-        } catch (BadCredentialsException e) {
-            throw new BadCredentialsException("Invalid email or password");
-        } catch (DisabledException e) {
-            throw new AccountDisabledException("Your account is disabled.");
-        } catch (LockedException e) {
-            throw new AccountLockedException("Your account is locked. Contact administrator.");
-        } catch (InternalAuthenticationServiceException e) {
-            throw new BadCredentialsException("Invalid email or password");
+        if (user.getStatus() == UserStatus.COMPANY_PENDING_APPROVAL) {
+            throw new AccountDisabledException("Your account is pending to company approval.");
         }
 
-        String accessToken = jwtUtil.generateAccessToken(user);
-        String refreshToken = jwtUtil.generateRefreshToken(
-                user.getId(),
-                user.getEmail()
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(normalizedEmail, password)
         );
 
-        refreshTokenService.createRefreshToken(user, refreshToken, deviceInfo, ipAddress);
+        String accessToken = jwtUtil.generateAccessToken(user);
+        String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
+
+        // ✅ save token per device
+        refreshTokenService.createRefreshToken(
+                user,
+                refreshToken,
+                deviceId,
+                deviceInfo,
+                ipAddress
+        );
 
         return AuthResponse.builder()
                 .accessToken(accessToken)
@@ -172,34 +179,43 @@ public class AuthService {
                 .build();
     }
     
+    
+    
     // ================= REFRESH TOKEN =================
     @Transactional
-    public AuthResponse refreshToken(RefreshTokenRequest request, String deviceInfo, String ipAddress) {
-        String token = request.getRefreshToken();
+    public AuthResponse refreshToken(RefreshTokenRequest request,
+                                     String deviceInfo,
+                                     String ipAddress) {
 
-        if (token == null || token.isBlank()) {
+        String rawToken = request.getRefreshToken();
+
+        if (rawToken == null || rawToken.isBlank()) {
             throw new InvalidOperationException("Refresh token is required");
         }
 
-        if (!jwtUtil.validateRefreshToken(token)) {
+        if (!jwtUtil.validateRefreshToken(rawToken)) {
             throw new InvalidOperationException("Invalid or expired refresh token");
         }
 
-        RefreshToken storedToken = refreshTokenService.verifyStoredToken(token);
+        RefreshToken storedToken = refreshTokenService.verifyStoredToken(rawToken);
         User user = storedToken.getUser();
 
+        // ✅ get SAME deviceId
+        String deviceId = storedToken.getDeviceId();
+
         String newAccessToken = jwtUtil.generateAccessToken(user);
+        String newRefreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        String newRefreshToken = jwtUtil.generateRefreshToken(
-                user.getId(),
-                user.getEmail()
-        );
-
-        // rotate old refresh token
+        // ✅ rotate token
         refreshTokenService.revokeToken(storedToken);
 
-        // save new refresh token
-        refreshTokenService.createRefreshToken(user, newRefreshToken, deviceInfo, ipAddress);
+        refreshTokenService.createRefreshToken(
+                user,
+                newRefreshToken, // ✅ FIXED
+                deviceId,        // ✅ FIXED
+                deviceInfo,
+                ipAddress
+        );
 
         return AuthResponse.builder()
                 .accessToken(newAccessToken)
@@ -209,6 +225,16 @@ public class AuthService {
                 .email(user.getEmail())
                 .role(user.getRole().name())
                 .build();
+    }
+    
+    @Transactional
+    public void logoutFromAllDevices(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setTokenVersion(user.getTokenVersion() + 1); // 👈 HERE
+
+        userRepository.save(user);
     }
 
     // ================= LOGOUT =================

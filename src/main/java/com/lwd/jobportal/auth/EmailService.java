@@ -1,7 +1,6 @@
 package com.lwd.jobportal.auth;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -11,14 +10,17 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class EmailService {
 
-    @Autowired
-    private JavaMailSender mailSender;
+	private final JavaMailSender mailSender;
+	private final String frontendBaseUrl;
+	private final String fromEmail;
 
-    @Value("${app.frontend.base-url}")
-    private String frontendBaseUrl;
-
-    @Value("${spring.mail.username}")
-    private String fromEmail;
+	public EmailService(JavaMailSender mailSender,
+	                   @Value("${app.frontend.base-url}") String frontendBaseUrl,
+	                   @Value("${spring.mail.username}") String fromEmail) {
+	    this.mailSender = mailSender;
+	    this.frontendBaseUrl = frontendBaseUrl;
+	    this.fromEmail = fromEmail;
+	}
 
     public void sendVerificationEmail(String toEmail, String token) {
         String subject = "Verify your LWD account";

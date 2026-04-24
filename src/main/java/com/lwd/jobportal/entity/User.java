@@ -58,6 +58,9 @@ public class User {
 
     @Column(nullable = false)
     private String password;
+    
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion = 0;
 
 
     @Enumerated(EnumType.STRING)

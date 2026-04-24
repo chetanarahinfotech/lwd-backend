@@ -9,28 +9,24 @@ import com.lwd.jobportal.util.EmailVerificationTokenUtil;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class EmailVerificationService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private EmailService emailService;
+    private final UserRepository userRepository;
+    private final EmailService emailService;
+    private final EmailVerificationTokenUtil tokenUtil;
+    private final EmailRateLimiterService rateLimiter;
     
-    private EmailVerificationTokenUtil tokenUtil;
-
-    @Autowired
-    private EmailRateLimiterService rateLimiter;
-
-    public void createAndSendToken(User user) {
+    
+	public void createAndSendToken(User user) {
         if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
             throw new IllegalArgumentException("User email is required");
         }

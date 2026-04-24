@@ -1,8 +1,6 @@
 package com.lwd.jobportal.auth;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,33 +24,25 @@ public class RefreshTokenService {
 
     @Transactional
     public RefreshToken createRefreshToken(User user,
-                                           String token,
+                                           String rawToken,
+                                           String deviceId,
                                            String deviceInfo,
                                            String ipAddress) {
 
-        if (user == null || user.getId() == null) {
-            throw new InvalidOperationException("User is required for refresh token creation");
-        }
+        String tokenHash = tokenHashUtil.sha256(rawToken);
 
-        if (token == null || token.isBlank()) {
-            throw new InvalidOperationException("Refresh token value cannot be null or blank");
-        }
-
-        String generatedDeviceId = UUID.randomUUID().toString();
-        String tokenHash = tokenHashUtil.sha256(token);
-
-        List<RefreshToken> activeTokens = refreshTokenRepository.findByUserIdAndRevokedFalse(user.getId());
-        refreshTokenRepository.deleteAll(activeTokens);
+        // remove only same device token
+        refreshTokenRepository.deleteByUserIdAndDeviceId(user.getId(), deviceId);
 
         RefreshToken refreshToken = RefreshToken.builder()
-                .token(token)
                 .tokenHash(tokenHash)
                 .user(user)
-                .deviceId(generatedDeviceId)
+                .deviceId(deviceId)
                 .deviceInfo(deviceInfo)
                 .ipAddress(ipAddress)
                 .expiryDate(LocalDateTime.now().plusSeconds(refreshExpirationMs / 1000))
                 .revoked(false)
+                .tokenVersion(user.getTokenVersion())
                 .createdAt(LocalDateTime.now())
                 .build();
 
@@ -69,6 +59,10 @@ public class RefreshTokenService {
 
         if (refreshToken.isRevoked()) {
             throw new InvalidOperationException("Refresh token has been revoked");
+        }
+        
+        if (refreshToken.getTokenVersion() != refreshToken.getUser().getTokenVersion()) {
+            throw new InvalidOperationException("Token invalid due to version change (logout all)");
         }
 
         if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
@@ -94,4 +88,6 @@ public class RefreshTokenService {
     public void revokeAllUserTokens(Long userId) {
         refreshTokenRepository.deleteByUserId(userId);
     }
+    
+    
 }

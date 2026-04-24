@@ -179,9 +179,9 @@ public class RecruiterService {
         }
 
         // Already approved
-//        if (recruiter.getStatus() == UserStatus.ACTIVE) {
-//            throw new IllegalStateException("Recruiter is already approved.");
-//        }
+        if (recruiter.getStatus() == UserStatus.ACTIVE) {
+            throw new IllegalStateException("Recruiter is already approved.");
+        }
 
         // Company already assigned / request already made
         if (recruiter.getCompany() != null) {

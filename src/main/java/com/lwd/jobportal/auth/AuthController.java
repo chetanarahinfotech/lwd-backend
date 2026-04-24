@@ -124,9 +124,10 @@ public class AuthController {
             @Valid @RequestBody LoginRequest request,
             HttpServletRequest httpRequest) {
 
-        AuthResponse response = authService.login(
+    	AuthResponse response = authService.login(
                 request.getEmail(),
                 request.getPassword(),
+                request.getDeviceId(), // ✅ FIXED
                 httpRequest.getHeader("User-Agent"),
                 httpRequest.getRemoteAddr()
         );

@@ -28,11 +28,11 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 1000)
-    private String token;
-
     @Column(name = "token_hash", nullable = false, length = 255)
     private String tokenHash;
+    
+    @Column(name = "token_version", nullable = false)
+    private int tokenVersion;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)
