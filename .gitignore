@@ -51,7 +51,7 @@ Thumbs.db
 application-*.yml
 application-*.yaml
 
-/application-dev.properties
+src/main/resources/application-dev.properties
 
 # =========================
 # LOGS
